@@ -1,0 +1,32 @@
+﻿import { http } from "./http";
+
+export const api = {
+  getDashboard: () => http.get("/dashboard/overview"),
+  getHotspots: (params: Record<string, unknown>) => http.get("/hotspots", { params }),
+  runCrawler: () => http.post("/crawler/run"),
+  updateHotspotStatus: (id: string, status: string) => http.post(`/hotspots/${id}/status`, { status }),
+  deleteHotspot: (id: string) => http.delete(`/hotspots/${id}`),
+  aggregateHotspot: (id: string) => http.post(`/hotspots/${id}/aggregate`),
+  getDrafts: () => http.get("/drafts"),
+  getDraft: (id: string) => http.get(`/drafts/${id}`),
+  generateDraft: (payload: { hotspotId: string; styleId?: string }) => http.post("/drafts/generate", payload),
+  updateDraft: (id: string, payload: Record<string, unknown>) => http.put(`/drafts/${id}`, payload),
+  getDraftVersions: (id: string) => http.get(`/drafts/${id}/versions`),
+  getAccounts: () => http.get("/accounts"),
+  createAccount: (payload: Record<string, unknown>) => http.post("/accounts", payload),
+  updateAccount: (id: string, payload: Record<string, unknown>) => http.put(`/accounts/${id}`, payload),
+  deleteAccount: (id: string) => http.delete(`/accounts/${id}`),
+  checkAccount: (id: string) => http.post(`/accounts/${id}/check`),
+  getPublishRecords: () => http.get("/publish/records"),
+  createPublishJob: (payload: Record<string, unknown>) => http.post("/publish/jobs", payload),
+  executeJob: (id: string) => http.post(`/publish/jobs/${id}/execute`),
+  refreshMetrics: () => http.post("/publish/metrics/refresh"),
+  getStyles: () => http.get("/styles"),
+  createStyle: (payload: Record<string, unknown>) => http.post("/styles", payload),
+  updateStyle: (id: string, payload: Record<string, unknown>) => http.put(`/styles/${id}`, payload),
+  getCrawlSettings: () => http.get("/settings/crawl"),
+  updateCrawlSettings: (payload: Record<string, unknown>) => http.put("/settings/crawl", payload),
+  getGenerationSettings: () => http.get("/settings/generation"),
+  updateGenerationSettings: (payload: Record<string, unknown>) => http.put("/settings/generation", payload),
+  getAnalytics: () => http.get("/analytics/overview")
+};
