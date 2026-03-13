@@ -1,4 +1,4 @@
-﻿export type SourcePlatform =
+export type SourcePlatform =
   | "douyin"
   | "xiaohongshu"
   | "weibo"
@@ -19,6 +19,7 @@ export type PlatformCode = SourcePlatform | PublishPlatform;
 
 export type HotspotStatus = "pending" | "processed" | "ignored";
 export type DraftStatus = "draft" | "ready" | "published";
+export type DraftLengthMode = "medium" | "detailed";
 export type PublishStatus = "pending" | "running" | "success" | "failed";
 export type AccountStatus = "normal" | "abnormal" | "unchecked";
 
@@ -35,6 +36,7 @@ export interface CrawlConfig {
 
 export interface GenerationConfig {
   defaultStyleId?: string;
+  defaultLengthMode?: DraftLengthMode;
   autoDetectIssues: boolean;
   autoEstimateOriginality: boolean;
 }
@@ -120,6 +122,7 @@ export interface DraftRecord {
   coverImage?: string;
   images: DraftImageBlock[];
   titleOptions: string[];
+  lengthMode: DraftLengthMode;
   status: DraftStatus;
   originalityScore: number;
   errorReport: string[];

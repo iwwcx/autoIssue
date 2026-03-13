@@ -1,4 +1,4 @@
-﻿import { Router } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { getDashboardOverview } from "../services/analyticsService";
 import {
@@ -13,6 +13,7 @@ import {
   getDraftById,
   listDraftVersions,
   listDrafts,
+  regenerateDraft,
   updateDraft
 } from "../services/draftService";
 import {
@@ -63,9 +64,15 @@ apiRouter.put("/settings/generation", (req, res) => {
   res.json({ success: true, data: updateGenerationConfig(req.body) });
 });
 
-apiRouter.post("/crawler/run", async (_req, res, next) => {
+apiRouter.post("/crawler/run", async (req, res, next) => {
   try {
-    res.json({ success: true, data: await crawlHotspots() });
+    const schema = z.object({
+      limit: z.number().int().min(1).max(20).optional(),
+      platform: z.enum(["douyin", "xiaohongshu", "weibo", "weixin", "baidu", "toutiao"]).optional(),
+      replaceExisting: z.boolean().optional()
+    });
+    const payload = schema.parse({ replaceExisting: true, ...(req.body || {}) });
+    res.json({ success: true, data: await crawlHotspots(payload) });
   } catch (error) {
     next(error);
   }
@@ -80,7 +87,7 @@ apiRouter.get("/hotspots", (req, res) => {
       status: req.query.status as string,
       topicType: req.query.topicType as string,
       page: Number(req.query.page || 1),
-      pageSize: Number(req.query.pageSize || 10)
+      pageSize: Number(req.query.pageSize || 20)
     })
   });
 });
@@ -128,7 +135,12 @@ apiRouter.get("/drafts/:id", (req, res) => {
 
 apiRouter.post("/drafts/generate", async (req, res, next) => {
   try {
-    res.json({ success: true, data: await generateDraft(req.body) });
+    const schema = z.object({
+      hotspotId: z.string(),
+      styleId: z.string().optional(),
+      lengthMode: z.enum(["medium", "detailed"]).optional()
+    });
+    res.json({ success: true, data: await generateDraft(schema.parse(req.body || {})) });
   } catch (error) {
     next(error);
   }
@@ -136,6 +148,18 @@ apiRouter.post("/drafts/generate", async (req, res, next) => {
 
 apiRouter.put("/drafts/:id", (req, res) => {
   res.json({ success: true, data: updateDraft(req.params.id, req.body, "admin") });
+});
+
+apiRouter.post("/drafts/:id/regenerate", async (req, res, next) => {
+  try {
+    const schema = z.object({
+      styleId: z.string().optional(),
+      lengthMode: z.enum(["medium", "detailed"]).optional()
+    });
+    res.json({ success: true, data: await regenerateDraft(req.params.id, schema.parse(req.body || {})) });
+  } catch (error) {
+    next(error);
+  }
 });
 
 apiRouter.get("/drafts/:id/versions", (req, res) => {

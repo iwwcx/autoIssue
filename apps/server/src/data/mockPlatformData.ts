@@ -4,14 +4,17 @@ function minutesAgo(minutes: number): string {
   return new Date(Date.now() - minutes * 60 * 1000).toISOString();
 }
 
+function createItem(input: HotspotInput): HotspotInput {
+  return input;
+}
+
 export const mockPlatformData: Record<SourcePlatform, HotspotInput[]> = {
   douyin: [
-    {
+    createItem({
       platform: "douyin",
       topicType: "科技",
       title: "国产 AI 办公助手上线，打工人效率再被刷新",
-      content:
-        "多家企业开始将国产 AI 办公助手接入客服、表格分析和内容总结场景，用户最关注的是准确率、成本和是否真的能替代重复劳动。",
+      content: "多家企业开始将国产 AI 办公助手接入客服、表格分析和内容总结场景，用户最关注的是准确率、成本和是否真的能替代重复劳动。",
       summary: "国产 AI 工具成为近期讨论热点，企业端落地节奏明显加快。",
       publishTime: minutesAgo(18),
       accountName: "科技观察站",
@@ -25,34 +28,110 @@ export const mockPlatformData: Record<SourcePlatform, HotspotInput[]> = {
       likeCount: 16300,
       commentCount: 2460,
       shareCount: 980
-    },
-    {
+    }),
+    createItem({
       platform: "douyin",
       topicType: "民生",
       title: "多地气温大幅回升，春装消费开始提前启动",
-      content:
-        "气温连续回暖带动商场和电商平台春装销量上涨，不少消费者已经从羽绒服切换到轻薄外套和运动单品。",
+      content: "气温连续回暖带动商场和电商平台春装销量上涨，不少消费者已经从羽绒服切换到轻薄外套和运动单品。",
       summary: "天气变化带动春装和出行消费，是典型民生类热议话题。",
       publishTime: minutesAgo(32),
       accountName: "城市民生日报",
       accountId: "dy-life-02",
       coverImage: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1200&q=80",
-      media: [
-        "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1200&q=80"
-      ],
+      media: ["https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1200&q=80"],
       tags: ["气温", "消费", "民生"],
       likeCount: 8900,
       commentCount: 1200,
       shareCount: 310
-    }
+    }),
+    createItem({
+      platform: "douyin",
+      topicType: "娱乐",
+      title: "热播剧大结局引发全网讨论，观众最在意角色走向",
+      content: "一部热播剧在大结局播出后迅速登上讨论榜，观众围绕人物命运、剧情节奏和伏笔回收展开大量讨论。",
+      summary: "大结局带动讨论热度二次冲高，情绪型内容传播迅速。",
+      publishTime: minutesAgo(15),
+      accountName: "剧综研究社",
+      accountId: "dy-ent-03",
+      coverImage: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["热播剧", "娱乐", "大结局"],
+      likeCount: 14100,
+      commentCount: 4100,
+      shareCount: 1020
+    }),
+    createItem({
+      platform: "douyin",
+      topicType: "科技",
+      title: "手机厂商集体发力 AI 助手，本地模型体验成新卖点",
+      content: "多家手机厂商在新品发布中强化 AI 助手、本地模型和系统级智能能力，用户关注隐私、速度和真实场景落地。",
+      summary: "AI 手机从概念走向卖点，终端能力成为行业新战场。",
+      publishTime: minutesAgo(24),
+      accountName: "数码热榜",
+      accountId: "dy-tech-04",
+      coverImage: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["手机", "AI", "数码"],
+      likeCount: 11800,
+      commentCount: 1700,
+      shareCount: 620
+    }),
+    createItem({
+      platform: "douyin",
+      topicType: "民生",
+      title: "周末短途游热度上升，周边城市酒店订单明显增长",
+      content: "在天气回暖和出行需求恢复的带动下，周末短途游热度显著上升，周边游成为家庭和年轻群体的优先选择。",
+      summary: "出行消费热度回升，周边游订单带动民生和旅游话题升温。",
+      publishTime: minutesAgo(41),
+      accountName: "出行早知道",
+      accountId: "dy-life-05",
+      coverImage: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["旅游", "周边游", "消费"],
+      likeCount: 7600,
+      commentCount: 980,
+      shareCount: 260
+    }),
+    createItem({
+      platform: "douyin",
+      topicType: "科技",
+      title: "AI 视频工具爆火后，普通创作者开始重新计算内容成本",
+      content: "越来越多中小创作者开始尝试 AI 视频生成和配音工具，讨论集中在制作效率、内容同质化和流量回报。",
+      summary: "创作工具升级，内容生产门槛正在被重新定义。",
+      publishTime: minutesAgo(27),
+      accountName: "内容实验室",
+      accountId: "dy-tech-06",
+      coverImage: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["AI视频", "创作者", "效率"],
+      likeCount: 10900,
+      commentCount: 2060,
+      shareCount: 710
+    }),
+    createItem({
+      platform: "douyin",
+      topicType: "娱乐",
+      title: "演唱会加场消息刷屏，二级市场票价再次引发争议",
+      content: "热门演唱会宣布加场后迅速带动平台讨论，网友围绕抢票难、二级市场溢价和官方防黄牛措施展开热议。",
+      summary: "流量明星与演唱会经济叠加，娱乐消费话题再度升温。",
+      publishTime: minutesAgo(35),
+      accountName: "娱乐即时报",
+      accountId: "dy-ent-07",
+      coverImage: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["演唱会", "娱乐", "票价"],
+      likeCount: 13200,
+      commentCount: 3520,
+      shareCount: 890
+    })
   ],
   xiaohongshu: [
-    {
+    createItem({
       platform: "xiaohongshu",
       topicType: "娱乐",
       title: "新综艺路透冲上热榜，观众最关心嘉宾化学反应",
-      content:
-        "综艺节目尚未正式开播，但路透片段已经在社交平台引发热议，不少网友围绕嘉宾互动、节目剪辑和播出时间展开讨论。",
+      content: "综艺节目尚未正式开播，但路透片段已经在社交平台引发热议，不少网友围绕嘉宾互动、节目剪辑和播出时间展开讨论。",
       summary: "娱乐类内容传播速度快，适合快速生成观点型稿件。",
       publishTime: minutesAgo(26),
       accountName: "娱乐小分队",
@@ -66,66 +145,217 @@ export const mockPlatformData: Record<SourcePlatform, HotspotInput[]> = {
       likeCount: 12400,
       commentCount: 3800,
       shareCount: 1200
-    },
-    {
+    }),
+    createItem({
       platform: "xiaohongshu",
       topicType: "科技",
       title: "年轻人开始讨论 AI 搜索替代传统搜索入口",
-      content:
-        "在内容消费和信息检索场景里，越来越多用户开始尝试 AI 搜索，讨论重点集中在答案整合、时效性和是否会减少打开多个 App 的次数。",
+      content: "在内容消费和信息检索场景里，越来越多用户开始尝试 AI 搜索，讨论重点集中在答案整合、时效性和是否会减少打开多个 App 的次数。",
       summary: "AI 搜索和内容入口迁移，是近期跨平台共同热点。",
       publishTime: minutesAgo(12),
       accountName: "数码研究所",
       accountId: "xhs-tech-02",
       coverImage: "https://images.unsplash.com/photo-1484417894907-623942c8ee29?auto=format&fit=crop&w=1200&q=80",
-      media: [
-        "https://images.unsplash.com/photo-1484417894907-623942c8ee29?auto=format&fit=crop&w=1200&q=80"
-      ],
+      media: ["https://images.unsplash.com/photo-1484417894907-623942c8ee29?auto=format&fit=crop&w=1200&q=80"],
       tags: ["AI搜索", "互联网", "效率工具"],
       likeCount: 10600,
       commentCount: 1820,
       shareCount: 760
-    }
+    }),
+    createItem({
+      platform: "xiaohongshu",
+      topicType: "民生",
+      title: "春季轻运动装备热度上升，通勤穿搭与功能性一起被讨论",
+      content: "不少用户开始分享轻运动鞋服、通勤穿搭和户外防晒装备，功能性与价格成为大家挑选时最在意的因素。",
+      summary: "消费与生活方式结合的内容，在平台上具备较强带货与讨论属性。",
+      publishTime: minutesAgo(16),
+      accountName: "生活研究室",
+      accountId: "xhs-life-03",
+      coverImage: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["穿搭", "消费", "轻运动"],
+      likeCount: 8600,
+      commentCount: 960,
+      shareCount: 440
+    }),
+    createItem({
+      platform: "xiaohongshu",
+      topicType: "科技",
+      title: "AI 笔记工具成爆款，学生和白领都在找替代方案",
+      content: "围绕会议纪要、课堂总结和资料整理的 AI 笔记工具讨论热度上升，用户比较的重点是识别准确率、同步速度和订阅价格。",
+      summary: "AI 工具从大而全走向细分场景，笔记场景是近期爆点之一。",
+      publishTime: minutesAgo(28),
+      accountName: "效率实验室",
+      accountId: "xhs-tech-04",
+      coverImage: "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["AI笔记", "工具", "学习效率"],
+      likeCount: 9800,
+      commentCount: 1540,
+      shareCount: 590
+    }),
+    createItem({
+      platform: "xiaohongshu",
+      topicType: "娱乐",
+      title: "明星机场穿搭再次出圈，同款搜索量半天翻倍",
+      content: "某明星最新机场造型引发热议，网友从单品、配色到品牌平替做了大量内容延伸，讨论度持续走高。",
+      summary: "娱乐与消费结合后，热点很容易快速扩散到穿搭和种草场景。",
+      publishTime: minutesAgo(33),
+      accountName: "时尚热榜",
+      accountId: "xhs-ent-05",
+      coverImage: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["穿搭", "明星", "娱乐"],
+      likeCount: 11700,
+      commentCount: 2140,
+      shareCount: 830
+    }),
+    createItem({
+      platform: "xiaohongshu",
+      topicType: "民生",
+      title: "小城市咖啡馆接连爆满，周末本地生活热度明显抬头",
+      content: "随着周末休闲消费回暖，不少小城市咖啡馆、书店和市集型业态迎来客流高峰，平台上相关探店内容快速增长。",
+      summary: "本地生活与消费恢复结合后，民生与商业观察类内容有了新切口。",
+      publishTime: minutesAgo(44),
+      accountName: "城市观察笔记",
+      accountId: "xhs-life-06",
+      coverImage: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["消费", "城市生活", "周末"],
+      likeCount: 7900,
+      commentCount: 880,
+      shareCount: 320
+    }),
+    createItem({
+      platform: "xiaohongshu",
+      topicType: "科技",
+      title: "智能眼镜再次被热议，用户真正关心的还是日常可用性",
+      content: "围绕拍摄、导航、翻译和佩戴体验，智能眼镜再次成为讨论热点，大家关心的是它到底能不能真正进入日常生活。",
+      summary: "可穿戴设备正在借 AI 话题重新回到大众视野。",
+      publishTime: minutesAgo(22),
+      accountName: "未来装备局",
+      accountId: "xhs-tech-07",
+      coverImage: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["智能眼镜", "AI", "硬件"],
+      likeCount: 11100,
+      commentCount: 1760,
+      shareCount: 650
+    })
   ],
   weibo: [
-    {
+    createItem({
       platform: "weibo",
       topicType: "科技",
       title: "AI 搜索入口正在重构内容分发逻辑",
-      content:
-        "业内人士认为，AI 搜索和摘要式问答正在改变传统信息流分发模式，内容平台和搜索平台之间的关系也会随之调整。",
+      content: "业内人士认为，AI 搜索和摘要式问答正在改变传统信息流分发模式，内容平台和搜索平台之间的关系也会随之调整。",
       summary: "科技行业从业者更关注内容分发和流量入口变化。",
       publishTime: minutesAgo(20),
       accountName: "互联网评论员",
       accountId: "wb-tech-01",
       coverImage: "https://images.unsplash.com/photo-1516321165247-4aa89a48be28?auto=format&fit=crop&w=1200&q=80",
-      media: [
-        "https://images.unsplash.com/photo-1516321165247-4aa89a48be28?auto=format&fit=crop&w=1200&q=80"
-      ],
+      media: ["https://images.unsplash.com/photo-1516321165247-4aa89a48be28?auto=format&fit=crop&w=1200&q=80"],
       tags: ["AI", "搜索", "分发"],
       likeCount: 9400,
       commentCount: 1540,
       shareCount: 620
-    },
-    {
+    }),
+    createItem({
       platform: "weibo",
       topicType: "民生",
       title: "春招开启后，灵活就业岗位热度持续升温",
-      content:
-        "多地春招活动启动后，灵活就业、远程协作和技能型岗位成为讨论重点，就业选择呈现出更加多样化的趋势。",
+      content: "多地春招活动启动后，灵活就业、远程协作和技能型岗位成为讨论重点，就业选择呈现出更加多样化的趋势。",
       summary: "与就业有关的话题具备明显的民生关注度和讨论基础。",
       publishTime: minutesAgo(38),
       accountName: "职场观测",
       accountId: "wb-job-02",
       coverImage: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
-      media: [
-        "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80"
-      ],
+      media: ["https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80"],
       tags: ["春招", "就业", "民生"],
       likeCount: 8200,
       commentCount: 2300,
       shareCount: 520
-    }
+    }),
+    createItem({
+      platform: "weibo",
+      topicType: "娱乐",
+      title: "电影首映口碑两极分化，热搜评论区连续刷屏",
+      content: "某部新片上映后迅速引发口碑两极讨论，支持者看重节奏和情绪表达，反对者则认为剧情逻辑仍有硬伤。",
+      summary: "影视口碑争议推动热搜持续发酵，评论型内容空间很大。",
+      publishTime: minutesAgo(11),
+      accountName: "影视热评官",
+      accountId: "wb-ent-03",
+      coverImage: "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["电影", "娱乐", "热搜"],
+      likeCount: 13800,
+      commentCount: 4300,
+      shareCount: 1190
+    }),
+    createItem({
+      platform: "weibo",
+      topicType: "科技",
+      title: "算力成本再次成为焦点，中小企业开始重算 AI 预算",
+      content: "围绕大模型部署和企业数字化升级，算力投入、模型调用成本和长期ROI成为行业讨论的核心。",
+      summary: "当 AI 从尝鲜转向落地，成本问题就会迅速成为讨论焦点。",
+      publishTime: minutesAgo(29),
+      accountName: "产业观察局",
+      accountId: "wb-tech-04",
+      coverImage: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1518186285589-2f7649de83e0?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["算力", "AI", "企业服务"],
+      likeCount: 9700,
+      commentCount: 1650,
+      shareCount: 700
+    }),
+    createItem({
+      platform: "weibo",
+      topicType: "民生",
+      title: "多地餐饮门店延长营业时间，夜间消费热度回暖",
+      content: "随着气温变化和消费活动增加，不少城市的夜间餐饮、休闲和商圈活动活跃度明显回升。",
+      summary: "夜间经济回暖，带动本地消费和民生观察话题持续升温。",
+      publishTime: minutesAgo(47),
+      accountName: "消费观察团",
+      accountId: "wb-life-05",
+      coverImage: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["餐饮", "消费", "夜间经济"],
+      likeCount: 7400,
+      commentCount: 950,
+      shareCount: 280
+    }),
+    createItem({
+      platform: "weibo",
+      topicType: "科技",
+      title: "企业知识库配 AI 问答正在普及，办公软件生态被重新洗牌",
+      content: "越来越多公司开始把知识库、工单系统与 AI 问答结合，讨论焦点集中在准确率、权限控制和落地效率。",
+      summary: "办公软件与 AI 结合后，企业服务市场正在出现新的竞争点。",
+      publishTime: minutesAgo(14),
+      accountName: "办公前线",
+      accountId: "wb-tech-06",
+      coverImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["知识库", "办公软件", "AI问答"],
+      likeCount: 10100,
+      commentCount: 1840,
+      shareCount: 760
+    }),
+    createItem({
+      platform: "weibo",
+      topicType: "娱乐",
+      title: "短剧平台再推爆款计划，行业竞争进入密集比拼期",
+      content: "短剧行业围绕爆款方法论、投流效率和制作成本展开新一轮讨论，平台和制作方都在抢占高增长赛道。",
+      summary: "短剧与流量生意结合紧密，既有娱乐属性也有产业讨论空间。",
+      publishTime: minutesAgo(23),
+      accountName: "内容产业说",
+      accountId: "wb-ent-07",
+      coverImage: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1200&q=80",
+      media: ["https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1200&q=80"],
+      tags: ["短剧", "娱乐", "平台"],
+      likeCount: 12500,
+      commentCount: 2750,
+      shareCount: 860
+    })
   ],
   weixin: [],
   baidu: [],

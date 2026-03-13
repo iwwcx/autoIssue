@@ -8,7 +8,7 @@
           </template>
           <el-form label-width="110px">
             <el-form-item label="选择稿件">
-              <el-select v-model="form.draftId" style="width: 100%">
+              <el-select v-model="form.draftId" placeholder="请选择稿件" style="width: 100%">
                 <el-option v-for="item in drafts" :key="item.id" :label="item.title" :value="item.id" />
               </el-select>
             </el-form-item>
@@ -24,10 +24,10 @@
             <el-form-item label="发布目标">
               <div style="width: 100%">
                 <div v-for="(target, index) in form.targets" :key="index" class="target-row">
-                  <el-select v-model="target.platform" placeholder="平台" style="width: 40%">
+                  <el-select v-model="target.platform" placeholder="选择平台" style="width: 40%">
                     <el-option v-for="item in appStore.publishPlatforms" :key="item.value" :label="item.label" :value="item.value" />
                   </el-select>
-                  <el-select v-model="target.accountId" placeholder="账号" style="width: 45%">
+                  <el-select v-model="target.accountId" placeholder="选择账号" style="width: 45%">
                     <el-option
                       v-for="item in filteredAccounts(target.platform)"
                       :key="item.id"
@@ -55,15 +55,31 @@
           <template #header>
             <div style="font-weight: 700">发布记录</div>
           </template>
-          <el-table :data="records" stripe>
-            <el-table-column prop="draftTitle" label="稿件标题" min-width="240" />
-            <el-table-column prop="mode" label="模式" width="100" />
-            <el-table-column prop="status" label="状态" width="100" />
+          <el-table :data="records" stripe empty-text="暂无发布记录">
+            <el-table-column prop="draftTitle" label="稿件标题" min-width="220" />
+            <el-table-column label="模式" width="110">
+              <template #default="scope">
+                <el-tag class="soft-tag status-running" effect="light">
+                  {{ publishModeLabel(scope.row.mode) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="scope">
+                <el-tag :class="publishStatusTagClass(scope.row.status)" class="soft-tag" effect="light">
+                  {{ publishStatusLabel(scope.row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column prop="scheduledAt" label="发布时间" width="180" />
-            <el-table-column label="目标结果" min-width="240">
+            <el-table-column label="目标结果" min-width="280">
               <template #default="scope">
                 <div v-for="item in scope.row.targets" :key="item.id" class="target-result">
-                  {{ item.platform }} / {{ item.status }} / {{ item.resultMessage }}
+                  <el-space wrap>
+                    <el-tag :class="platformTagClass(item.platform)" class="soft-tag" effect="light">{{ platformLabel(item.platform) }}</el-tag>
+                    <el-tag :class="publishStatusTagClass(item.status)" class="soft-tag" effect="light">{{ publishStatusLabel(item.status) }}</el-tag>
+                    <span class="target-message">{{ item.resultMessage || '等待执行结果' }}</span>
+                  </el-space>
                 </div>
               </template>
             </el-table-column>
@@ -84,6 +100,13 @@ import { onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { api } from "../../api/modules";
 import { useAppStore } from "../../stores/app";
+import {
+  platformLabel,
+  platformTagClass,
+  publishModeLabel,
+  publishStatusLabel,
+  publishStatusTagClass
+} from "../../shared/display";
 
 const appStore = useAppStore();
 const drafts = ref<Array<Record<string, any>>>([]);
@@ -156,8 +179,33 @@ onMounted(loadBase);
 }
 
 .target-result {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.target-message {
   color: #51617b;
 }
-</style>
 
+.soft-tag {
+  border: none;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-weight: 600;
+}
+
+.tag-douyin { color: #0f172a; background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(34, 211, 238, 0.24)); }
+.tag-xiaohongshu { color: #9f1239; background: linear-gradient(135deg, rgba(251, 113, 133, 0.18), rgba(244, 114, 182, 0.22)); }
+.tag-weibo { color: #9a3412; background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(251, 146, 60, 0.24)); }
+.tag-netease { color: #1d4ed8; background: rgba(96, 165, 250, 0.18); }
+.tag-sohu { color: #065f46; background: rgba(110, 231, 183, 0.22); }
+.tag-sina { color: #b45309; background: rgba(253, 230, 138, 0.3); }
+.tag-weixin { color: #166534; background: rgba(134, 239, 172, 0.26); }
+.tag-baijiahao { color: #7c3aed; background: rgba(196, 181, 253, 0.24); }
+.tag-pengpai { color: #0f766e; background: rgba(153, 246, 228, 0.22); }
+.tag-default { color: #475569; background: rgba(148, 163, 184, 0.18); }
+.status-pending { color: #1d4ed8; background: rgba(96, 165, 250, 0.18); }
+.status-processed { color: #047857; background: rgba(52, 211, 153, 0.18); }
+.status-ignored { color: #6b7280; background: rgba(156, 163, 175, 0.18); }
+.status-running { color: #7c3aed; background: rgba(196, 181, 253, 0.22); }
+.status-failed { color: #b91c1c; background: rgba(252, 165, 165, 0.22); }
+</style>

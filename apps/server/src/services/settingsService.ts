@@ -1,4 +1,4 @@
-﻿import { db } from "../config/database";
+import { db } from "../config/database";
 import { createId } from "../shared/text";
 import { parseJson, toJson } from "../shared/json";
 import type { CrawlConfig, GenerationConfig } from "../types";
@@ -11,14 +11,15 @@ const defaultCrawlConfig: CrawlConfig = {
   autoCrawl: true,
   frequencyMinutes: 20,
   enabledPlatforms: ["douyin", "xiaohongshu", "weibo"],
-  keywords: ["民生", "科技", "娱乐"],
-  blockedWords: ["广告", "抽奖", "带货返利"],
+  keywords: ["\u6c11\u751f", "\u79d1\u6280", "\u5a31\u4e50"],
+  blockedWords: ["\u5e7f\u544a", "\u62bd\u5956", "\u5e26\u8d27\u8fd4\u5229"],
   blockedAccounts: [],
   withinHours: 1,
-  maxPerPlatform: 10
+  maxPerPlatform: 20
 };
 
 const defaultGenerationConfig: GenerationConfig = {
+  defaultLengthMode: "medium",
   autoDetectIssues: true,
   autoEstimateOriginality: true
 };
@@ -68,11 +69,17 @@ export function setSetting(key: SettingKey, value: unknown): void {
 }
 
 export function getCrawlConfig(): CrawlConfig {
-  return getSetting<CrawlConfig>("crawlConfig", defaultCrawlConfig);
+  const saved = getSetting<CrawlConfig>("crawlConfig", defaultCrawlConfig);
+  return {
+    ...defaultCrawlConfig,
+    ...saved,
+    maxPerPlatform: Math.min(20, Math.max(5, Number(saved.maxPerPlatform || defaultCrawlConfig.maxPerPlatform)))
+  };
 }
 
 export function updateCrawlConfig(payload: Partial<CrawlConfig>): CrawlConfig {
   const next = { ...getCrawlConfig(), ...payload };
+  next.maxPerPlatform = Math.min(20, Math.max(5, Number(next.maxPerPlatform || 5)));
   setSetting("crawlConfig", next);
   return next;
 }

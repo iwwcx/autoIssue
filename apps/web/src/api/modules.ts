@@ -1,15 +1,16 @@
-﻿import { http } from "./http";
+import { http } from "./http";
 
 export const api = {
   getDashboard: () => http.get("/dashboard/overview"),
   getHotspots: (params: Record<string, unknown>) => http.get("/hotspots", { params }),
-  runCrawler: () => http.post("/crawler/run"),
+  runCrawler: (payload?: { limit?: number; platform?: string }) => http.post("/crawler/run", payload || {}),
   updateHotspotStatus: (id: string, status: string) => http.post(`/hotspots/${id}/status`, { status }),
   deleteHotspot: (id: string) => http.delete(`/hotspots/${id}`),
   aggregateHotspot: (id: string) => http.post(`/hotspots/${id}/aggregate`),
   getDrafts: () => http.get("/drafts"),
   getDraft: (id: string) => http.get(`/drafts/${id}`),
-  generateDraft: (payload: { hotspotId: string; styleId?: string }) => http.post("/drafts/generate", payload),
+  generateDraft: (payload: { hotspotId: string; styleId?: string; lengthMode?: string }) => http.post("/drafts/generate", payload),
+  regenerateDraft: (id: string, payload?: { styleId?: string; lengthMode?: string }) => http.post(`/drafts/${id}/regenerate`, payload || {}),
   updateDraft: (id: string, payload: Record<string, unknown>) => http.put(`/drafts/${id}`, payload),
   getDraftVersions: (id: string) => http.get(`/drafts/${id}/versions`),
   getAccounts: () => http.get("/accounts"),

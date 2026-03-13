@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div>
     <el-row :gutter="16">
       <el-col :span="12">
@@ -17,7 +17,7 @@
               <el-input-number v-model="crawl.withinHours" :min="1" :max="12" />
             </el-form-item>
             <el-form-item label="单平台上限">
-              <el-input-number v-model="crawl.maxPerPlatform" :min="1" :max="50" />
+              <el-input-number v-model="crawl.maxPerPlatform" :min="5" :max="20" />
             </el-form-item>
             <el-form-item label="平台">
               <el-select v-model="crawl.enabledPlatforms" multiple style="width: 100%">
@@ -111,7 +111,7 @@ const crawl = reactive<Record<string, any>>({
   autoCrawl: true,
   frequencyMinutes: 20,
   withinHours: 1,
-  maxPerPlatform: 10,
+  maxPerPlatform: 20,
   enabledPlatforms: [],
   keywords: [],
   blockedWords: [],

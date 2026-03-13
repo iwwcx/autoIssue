@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { env } from "./env";
@@ -80,6 +80,7 @@ export function runMigrations(): void {
       coverImage TEXT,
       imagesJson TEXT NOT NULL,
       titleOptionsJson TEXT NOT NULL,
+      lengthMode TEXT NOT NULL DEFAULT 'medium',
       status TEXT NOT NULL DEFAULT 'draft',
       originalityScore REAL NOT NULL DEFAULT 0,
       errorReportJson TEXT NOT NULL,
@@ -138,4 +139,9 @@ export function runMigrations(): void {
       rawJson TEXT
     );
   `);
+
+  const draftColumns = db.prepare("PRAGMA table_info(drafts)").all() as Array<{ name: string }>;
+  if (!draftColumns.some((column) => column.name === "lengthMode")) {
+    db.exec("ALTER TABLE drafts ADD COLUMN lengthMode TEXT NOT NULL DEFAULT 'medium'");
+  }
 }
