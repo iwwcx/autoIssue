@@ -1,4 +1,4 @@
-import { db } from "../config/database";
+﻿import { db } from "../config/database";
 import { createId } from "../shared/text";
 import { parseJson, toJson } from "../shared/json";
 import type { CrawlConfig, GenerationConfig } from "../types";
@@ -73,13 +73,13 @@ export function getCrawlConfig(): CrawlConfig {
   return {
     ...defaultCrawlConfig,
     ...saved,
-    maxPerPlatform: Math.min(20, Math.max(5, Number(saved.maxPerPlatform || defaultCrawlConfig.maxPerPlatform)))
+    maxPerPlatform: Math.min(30, Math.max(5, Number(saved.maxPerPlatform || defaultCrawlConfig.maxPerPlatform)))
   };
 }
 
 export function updateCrawlConfig(payload: Partial<CrawlConfig>): CrawlConfig {
   const next = { ...getCrawlConfig(), ...payload };
-  next.maxPerPlatform = Math.min(20, Math.max(5, Number(next.maxPerPlatform || 5)));
+  next.maxPerPlatform = Math.min(30, Math.max(5, Number(next.maxPerPlatform || 5)));
   setSetting("crawlConfig", next);
   return next;
 }

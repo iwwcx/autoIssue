@@ -1,4 +1,4 @@
-import { db } from "../config/database";
+﻿import { db } from "../config/database";
 import { getRelevantImageCandidates } from "../shared/imageTheme";
 import { parseJson, toJson } from "../shared/json";
 import {
@@ -40,6 +40,9 @@ const imageCaptions = [
 ];
 
 function normalizeLengthMode(lengthMode?: string): DraftLengthMode {
+  if (lengthMode === "simple") {
+    return "simple";
+  }
   if (lengthMode === "detailed") {
     return "detailed";
   }
@@ -84,6 +87,15 @@ function platformLabel(platform: string): string {
 }
 
 function buildTitleOptions(title: string, topicType: string, lengthMode: DraftLengthMode): string[] {
+  if (lengthMode === "simple") {
+    return [
+      `${title}，重点其实就这几点`,
+      `${topicType}速看：${title}`,
+      `${title}，一文看懂核心信息`,
+      `${title}背后，到底发生了什么`
+    ];
+  }
+
   const common = [
     `${title}\uff0c\u4e3a\u4ec0\u4e48\u8fd9\u6b21\u4f1a\u6301\u7eed\u51b2\u4e0a\u70ed\u699c`,
     `${topicType}\u70ed\u70b9\u8ffd\u8e2a\uff1a${title}`,
@@ -112,7 +124,7 @@ function buildImages(input: {
   relatedImages: string[];
   lengthMode: DraftLengthMode;
 }): DraftImageBlock[] {
-  const limit = input.lengthMode === "detailed" ? 4 : 3;
+  const limit = input.lengthMode === "simple" ? 2 : input.lengthMode === "detailed" ? 4 : 3;
   const urls = pickDistinct(
     [
       ...getRelevantImageCandidates(
@@ -149,14 +161,14 @@ function buildImageMarkdown(images: DraftImageBlock[], index: number): string {
 }
 
 function buildSourceSummary(relatedSources: Array<{ platform: string; title: string; summary: string }>, lengthMode: DraftLengthMode): string[] {
-  const limit = lengthMode === "detailed" ? 5 : 3;
+  const limit = lengthMode === "simple" ? 2 : lengthMode === "detailed" ? 5 : 3;
   return relatedSources.slice(0, limit).map((item) => {
     return `${platformLabel(item.platform)}\u7aef\u91cd\u70b9\u5728\u201c${item.title}\u201d\uff0c\u6838\u5fc3\u8ba8\u8bba\u96c6\u4e2d\u5728\uff1a${item.summary}`;
   });
 }
 
 function buildCoreFacts(coreFacts: string[], lengthMode: DraftLengthMode): string {
-  const limit = lengthMode === "detailed" ? 5 : 3;
+  const limit = lengthMode === "simple" ? 2 : lengthMode === "detailed" ? 5 : 3;
   return coreFacts
     .slice(0, limit)
     .map((item, index) => `${index + 1}. ${item}`)
@@ -196,6 +208,23 @@ function buildContent(style: StyleTemplate, input: {
     ? `\u7ed3\u5408\u73b0\u6709\u8349\u7a3f\u91cc\u5df2\u7ecf\u63d0\u5230\u7684\u5173\u6ce8\u70b9\uff0c\u8fd9\u6b21\u91cd\u65b0\u751f\u6210\u4f1a\u66f4\u5f3a\u8c03\u201c${input.referenceSummary}\u201d\u8fd9\u6761\u4e3b\u7ebf\u3002`
     : "";
 
+  if (input.lengthMode === "simple") {
+    return makeParagraphs([
+      opening,
+      `${input.summary}${referenceLead}`,
+      image1,
+      `先看重点：\n${factList}`,
+      `再看平台上的补充讨论：\n${sourceSummary}`,
+      image2,
+      `我的判断是：${style.opinionTemplate}`,
+      interpolate(style.closingTemplate, {
+        title: input.title,
+        topicType: input.topicType,
+        summary: input.summary,
+        signature: style.signature
+      })
+    ]);
+  }
   if (input.lengthMode === "detailed") {
     return makeParagraphs([
       opening,
@@ -475,3 +504,26 @@ export function listDraftVersions(draftId: string): DraftVersionRecord[] {
     .all(draftId) as Record<string, unknown>[];
   return rows.map(mapVersion);
 }
+
+export function deleteDraft(id: string): void {
+  db.prepare("DELETE FROM draft_versions WHERE draftId = ?").run(id);
+  db.prepare("DELETE FROM drafts WHERE id = ?").run(id);
+}
+
+export function deleteDrafts(ids: string[]): number {
+  const removeVersionStmt = db.prepare("DELETE FROM draft_versions WHERE draftId = ?");
+  const removeDraftStmt = db.prepare("DELETE FROM drafts WHERE id = ?");
+  const transaction = db.transaction((draftIds: string[]) => {
+    let count = 0;
+    draftIds.forEach((id) => {
+      removeVersionStmt.run(id);
+      const result = removeDraftStmt.run(id);
+      count += Number(result.changes || 0);
+    });
+    return count;
+  });
+  return transaction(ids);
+}
+
+
+

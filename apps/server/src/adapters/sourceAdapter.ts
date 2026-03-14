@@ -1,4 +1,4 @@
-import { mockPlatformData } from "../data/mockPlatformData";
+﻿import { mockPlatformData } from "../data/mockPlatformData";
 import { containsKeyword, pickDistinct } from "../shared/text";
 import type { HotspotInput, SourcePlatform } from "../types";
 
@@ -45,7 +45,7 @@ class MockSourceAdapter implements SourceAdapter {
       const text = `${item.title} ${item.summary} ${item.content} ${item.tags.join(" ")}`;
       return (
         ageHours <= params.withinHours &&
-        containsKeyword(text, params.keywords) &&
+        (!params.keywords.length || containsKeyword(text, params.keywords)) &&
         !params.blockedAccounts.includes(item.accountName) &&
         !params.blockedWords.some((word) => text.includes(word))
       );

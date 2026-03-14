@@ -1,4 +1,4 @@
-import { db } from "../config/database";
+﻿import { db } from "../config/database";
 import { sourceRegistry } from "../adapters/sourceAdapter";
 import { calculateHeatScore, calculateQualityScore } from "../shared/heat";
 import { parseJson, toJson } from "../shared/json";
@@ -138,13 +138,16 @@ function persistHotspot(item: HotspotInput): HotspotRecord {
   return hotspot;
 }
 
-export async function crawlHotspots(options?: { limit?: number; platform?: string; replaceExisting?: boolean }): Promise<{
+export async function crawlHotspots(options?: { limit?: number; platform?: string; keyword?: string; topicType?: string; replaceExisting?: boolean }): Promise<{
   inserted: number;
   updatedAt: string;
   items: HotspotRecord[];
 }> {
   const config = getCrawlConfig();
-  const requestedLimit = clamp(Number(options?.limit || 5), 1, 20);
+  const requestedLimit = clamp(Number(options?.limit || 8), 1, 30);
+  const requestedKeyword = String(options?.keyword || '').trim();
+  const requestedTopicType = String(options?.topicType || '').trim();
+  const effectiveKeywords = requestedKeyword ? [requestedKeyword] : config.keywords;
   const platforms = options?.platform ? [options.platform as SourcePlatform] : config.enabledPlatforms;
   const seed = Date.now() % 1000;
   const candidates: HotspotInput[] = [];
@@ -156,17 +159,26 @@ export async function crawlHotspots(options?: { limit?: number; platform?: strin
     }
 
     const fetched = await adapter.fetchTrending({
-      keywords: config.keywords,
+      keywords: effectiveKeywords,
       blockedAccounts: config.blockedAccounts,
       blockedWords: config.blockedWords,
       withinHours: config.withinHours,
-      limit: Math.min(20, Math.max(requestedLimit * 2, 6)),
+      limit: Math.min(30, Math.max(requestedLimit * 2, 8)),
       seed: seed + index * 29
     });
     fetched.forEach((item) => candidates.push(item));
   }
 
-  const selected = pickDistinct(sortCandidates(candidates, seed), (item) => `${item.platform}_${item.title}_${item.accountName}`).slice(0, requestedLimit);
+  const selected = pickDistinct(
+    sortCandidates(candidates, seed).filter((item) => {
+      if (!requestedTopicType) {
+        return true;
+      }
+      const text = `${item.topicType} ${item.title} ${item.summary} ${item.content} ${item.tags.join(" ")}`;
+      return containsKeyword(text, [requestedTopicType]);
+    }),
+    (item) => `${item.platform}_${item.title}_${item.accountName}`
+  ).slice(0, requestedLimit);
 
   if (options?.replaceExisting) {
     db.prepare("DELETE FROM hotspot_aggregations").run();

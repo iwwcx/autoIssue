@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div>
     <el-card class="page-card" shadow="never">
       <el-form :inline="true" :model="filters">
@@ -10,17 +10,8 @@
           </el-select>
         </el-form-item>
         <el-form-item :label="texts.topicType">
-          <el-select v-model="filters.topicType" clearable :placeholder="texts.allType" style="width: 140px">
-            <el-option :label="texts.tech" :value="texts.tech" />
-            <el-option :label="texts.life" :value="texts.life" />
-            <el-option :label="texts.ent" :value="texts.ent" />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="texts.status">
-          <el-select v-model="filters.status" clearable :placeholder="texts.allStatus" style="width: 140px">
-            <el-option :label="statusLabelMap.pending" value="pending" />
-            <el-option :label="statusLabelMap.processed" value="processed" />
-            <el-option :label="statusLabelMap.ignored" value="ignored" />
+          <el-select v-model="filters.topicType" clearable :placeholder="texts.allType" style="width: 160px">
+            <el-option v-for="item in topicOptions" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item :label="texts.keyword">
@@ -33,18 +24,20 @@
         </el-form-item>
         <el-form-item :label="texts.lengthMode">
           <el-select v-model="draftLengthMode" style="width: 140px">
+            <el-option :label="texts.simpleMode" value="simple" />
             <el-option :label="texts.mediumMode" value="medium" />
             <el-option :label="texts.detailedMode" value="detailed" />
           </el-select>
         </el-form-item>
         <el-form-item :label="texts.crawlCount">
-          <el-input-number v-model="crawlLimit" :min="1" :max="20" style="width: 140px" />
+          <el-input-number v-model="crawlLimit" :min="1" :max="30" style="width: 140px" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="load">{{ texts.filter }}</el-button>
-          <el-button @click="runCrawler">{{ texts.runCrawler }}</el-button>
+          <el-button @click="load">刷新列表</el-button>
+          <el-button type="primary" @click="runCrawler">{{ texts.runCrawler }}</el-button>
         </el-form-item>
       </el-form>
+      <div class="toolbar-tip">抓取条件会直接决定这次抓回来的新闻，不再对结果列表做额外二次筛选。</div>
     </el-card>
 
     <el-card class="page-card" style="margin-top: 16px">
@@ -57,7 +50,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="topicType" :label="texts.topicType" width="100" />
+        <el-table-column prop="topicType" :label="texts.topicType" width="120" />
         <el-table-column prop="accountName" :label="texts.accountName" width="150" />
         <el-table-column prop="heatScore" :label="texts.heat" width="110" />
         <el-table-column :label="texts.status" width="120">
@@ -134,7 +127,7 @@
                 <span class="source-title">{{ item.title }}</span>
               </div>
               <div class="source-summary">{{ item.summary }}</div>
-              <div class="source-meta">{{ texts.sourceAccount }}{{ item.accountName }} ｜ {{ texts.publishTime }}{{ item.publishTime }}</div>
+              <div class="source-meta">{{ texts.sourceAccount }}{{ item.accountName }} · {{ texts.publishTime }}{{ item.publishTime }}</div>
             </div>
           </div>
           <el-empty v-else :description="texts.emptySources" />
@@ -163,7 +156,7 @@ import { api } from "../../api/modules";
 const router = useRouter();
 const selectedStyleId = ref("");
 const draftLengthMode = ref("medium");
-const crawlLimit = ref(5);
+const crawlLimit = ref(8);
 const styles = ref<Array<Record<string, any>>>([]);
 const aggregationVisible = ref(false);
 const aggregationData = ref<Record<string, any> | null>(null);
@@ -176,7 +169,6 @@ const aggregationTopic = reactive({
 const filters = reactive({
   platform: "",
   topicType: "",
-  status: "",
   keyword: "",
   page: 1,
   pageSize: 20
@@ -186,63 +178,61 @@ const tableData = reactive({
   list: [] as Array<Record<string, any>>
 });
 
+const topicOptions = ["AI", "科技", "财经", "民生", "教育", "健康", "汽车", "房产", "文旅", "游戏", "娱乐", "体育", "社会", "国际"];
+
 const texts = {
-  platform: "\u5e73\u53f0",
-  allPlatform: "\u5168\u90e8\u5e73\u53f0",
-  topicType: "\u5206\u7c7b",
-  allType: "\u5168\u90e8\u5206\u7c7b",
-  status: "\u72b6\u6001",
-  allStatus: "\u5168\u90e8\u72b6\u6001",
-  keyword: "\u5173\u952e\u8bcd",
-  keywordPlaceholder: "\u8f93\u5165\u6807\u9898\u3001\u6b63\u6587\u6216\u6807\u7b7e\u5173\u952e\u8bcd",
-  style: "\u751f\u6210\u98ce\u683c",
-  defaultStyle: "\u4f7f\u7528\u9ed8\u8ba4\u98ce\u683c",
-  lengthMode: "\u7a3f\u4ef6\u7bc7\u5e45",
-  mediumMode: "\u4e2d\u7b49\u5185\u5bb9",
-  detailedMode: "\u8be6\u7ec6\u5185\u5bb9",
-  crawlCount: "\u672c\u6b21\u6293\u53d6",
-  filter: "\u7b5b\u9009",
-  runCrawler: "\u7acb\u5373\u6293\u53d6",
-  hotTitle: "\u70ed\u70b9\u6807\u9898",
-  accountName: "\u53d1\u5e03\u8d26\u53f7",
-  heat: "\u70ed\u5ea6",
-  actions: "\u64cd\u4f5c",
-  aggregate: "\u6c47\u603b",
-  generate: "\u751f\u6210\u7a3f\u4ef6",
-  markProcessed: "\u6807\u5df2\u5904\u7406",
-  remove: "\u5220\u9664",
-  aggregateResult: "\u70ed\u70b9\u6c47\u603b\u7ed3\u679c",
-  aggregateSummary: "\u6c47\u603b\u8bf4\u660e",
-  coreFacts: "\u6838\u5fc3\u4fe1\u606f\u70b9",
-  relatedSources: "\u8de8\u5e73\u53f0\u8865\u5145\u6765\u6e90",
-  sourceAccount: "\u6765\u6e90\u8d26\u53f7\uff1a",
-  publishTime: "\u53d1\u5e03\u65f6\u95f4\uff1a",
-  emptySources: "\u6682\u65f6\u6ca1\u6709\u8865\u5145\u6765\u6e90",
-  relatedImages: "\u53ef\u7528\u914d\u56fe",
-  emptyImages: "\u6682\u65f6\u6ca1\u6709\u53ef\u7528\u56fe\u7247",
-  tech: "\u79d1\u6280",
-  life: "\u6c11\u751f",
-  ent: "\u5a31\u4e50"
+  platform: "平台",
+  allPlatform: "全部平台",
+  topicType: "分类",
+  allType: "全部分类",
+  status: "状态",
+  keyword: "关键词",
+  keywordPlaceholder: "输入想抓取的新闻关键词，比如 AI、教育、汽车",
+  style: "生成风格",
+  defaultStyle: "使用默认风格",
+  lengthMode: "稿件篇幅",
+  simpleMode: "简单内容",
+  mediumMode: "中等内容",
+  detailedMode: "详细内容",
+  crawlCount: "本次抓取",
+  runCrawler: "立即抓取",
+  hotTitle: "热点标题",
+  accountName: "发布账号",
+  heat: "热度",
+  actions: "操作",
+  aggregate: "汇总",
+  generate: "生成稿件",
+  markProcessed: "标已处理",
+  remove: "删除",
+  aggregateResult: "热点汇总结果",
+  aggregateSummary: "汇总说明",
+  coreFacts: "核心信息点",
+  relatedSources: "跨平台补充来源",
+  sourceAccount: "来源账号：",
+  publishTime: "发布时间：",
+  emptySources: "暂时没有补充来源",
+  relatedImages: "可用配图",
+  emptyImages: "暂时没有可用图片"
 };
 
 const platformLabelMap: Record<string, string> = {
-  douyin: "\u6296\u97f3",
-  xiaohongshu: "\u5c0f\u7ea2\u4e66",
-  weibo: "\u5fae\u535a"
+  douyin: "抖音",
+  xiaohongshu: "小红书",
+  weibo: "微博"
 };
 
 const statusLabelMap: Record<string, string> = {
-  pending: "\u5f85\u5904\u7406",
-  processed: "\u5df2\u5904\u7406",
-  ignored: "\u5df2\u5ffd\u7565"
+  pending: "待处理",
+  processed: "已处理",
+  ignored: "已忽略"
 };
 
 function platformLabel(platform: string) {
-  return platformLabelMap[platform] || platform || "\u672a\u77e5\u5e73\u53f0";
+  return platformLabelMap[platform] || platform || "未知平台";
 }
 
 function statusLabel(status: string) {
-  return statusLabelMap[status] || status || "\u672a\u77e5\u72b6\u6001";
+  return statusLabelMap[status] || status || "未知状态";
 }
 
 function platformTagClass(platform: string) {
@@ -262,7 +252,7 @@ function statusTagClass(status: string) {
 }
 
 async function load() {
-  const response = await api.getHotspots(filters);
+  const response = await api.getHotspots({ page: filters.page, pageSize: filters.pageSize });
   Object.assign(tableData, response.data);
 }
 
@@ -273,10 +263,12 @@ async function loadStyles() {
 
 async function runCrawler() {
   const response = await api.runCrawler({
-    limit: Number(crawlLimit.value || 5),
-    platform: filters.platform || undefined
+    limit: Number(crawlLimit.value || 8),
+    platform: filters.platform || undefined,
+    keyword: filters.keyword || undefined,
+    topicType: filters.topicType || undefined
   });
-  ElMessage.success(`\u6293\u53d6\u5b8c\u6210\uff0c\u672c\u6b21\u5904\u7406 ${response.data.inserted || 0} \u6761\u70ed\u70b9`);
+  ElMessage.success(`抓取完成，本次处理 ${response.data.inserted || 0} 条热点`);
   filters.page = 1;
   await load();
 }
@@ -299,20 +291,20 @@ async function generate(id: string) {
     styleId: selectedStyleId.value || undefined,
     lengthMode: draftLengthMode.value
   });
-  ElMessage.success("\u56fe\u6587\u7a3f\u4ef6\u5df2\u751f\u6210");
+  ElMessage.success("图文稿件已生成");
   router.push(`/drafts/${response.data.id}`);
 }
 
 async function mark(id: string, status: string) {
   await api.updateHotspotStatus(id, status);
-  ElMessage.success("\u72b6\u6001\u5df2\u66f4\u65b0");
+  ElMessage.success("状态已更新");
   await load();
 }
 
 async function remove(id: string) {
-  await ElMessageBox.confirm("\u786e\u8ba4\u5220\u9664\u8fd9\u6761\u70ed\u70b9\u5417\uff1f", "\u63d0\u793a", { type: "warning" });
+  await ElMessageBox.confirm("确认删除这条热点吗？", "提示", { type: "warning" });
   await api.deleteHotspot(id);
-  ElMessage.success("\u5df2\u5220\u9664");
+  ElMessage.success("已删除");
   await load();
 }
 
@@ -322,6 +314,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.toolbar-tip {
+  margin-top: 8px;
+  color: #7b8aa4;
+  font-size: 13px;
+}
+
 .pagination {
   margin-top: 18px;
   display: flex;

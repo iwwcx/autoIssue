@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import { z } from "zod";
 import { getDashboardOverview } from "../services/analyticsService";
 import {
@@ -9,6 +9,8 @@ import {
   updateAccount
 } from "../services/accountService";
 import {
+  deleteDraft,
+  deleteDrafts,
   generateDraft,
   getDraftById,
   listDraftVersions,
@@ -67,7 +69,9 @@ apiRouter.put("/settings/generation", (req, res) => {
 apiRouter.post("/crawler/run", async (req, res, next) => {
   try {
     const schema = z.object({
-      limit: z.number().int().min(1).max(20).optional(),
+      limit: z.number().int().min(1).max(30).optional(),
+      keyword: z.string().optional(),
+      topicType: z.string().optional(),
       platform: z.enum(["douyin", "xiaohongshu", "weibo", "weixin", "baidu", "toutiao"]).optional(),
       replaceExisting: z.boolean().optional()
     });
@@ -138,7 +142,7 @@ apiRouter.post("/drafts/generate", async (req, res, next) => {
     const schema = z.object({
       hotspotId: z.string(),
       styleId: z.string().optional(),
-      lengthMode: z.enum(["medium", "detailed"]).optional()
+      lengthMode: z.enum(["simple", "medium", "detailed"]).optional()
     });
     res.json({ success: true, data: await generateDraft(schema.parse(req.body || {})) });
   } catch (error) {
@@ -154,7 +158,7 @@ apiRouter.post("/drafts/:id/regenerate", async (req, res, next) => {
   try {
     const schema = z.object({
       styleId: z.string().optional(),
-      lengthMode: z.enum(["medium", "detailed"]).optional()
+      lengthMode: z.enum(["simple", "medium", "detailed"]).optional()
     });
     res.json({ success: true, data: await regenerateDraft(req.params.id, schema.parse(req.body || {})) });
   } catch (error) {
@@ -166,6 +170,18 @@ apiRouter.get("/drafts/:id/versions", (req, res) => {
   res.json({ success: true, data: listDraftVersions(req.params.id) });
 });
 
+apiRouter.delete("/drafts/:id", (req, res) => {
+  deleteDraft(req.params.id);
+  res.json({ success: true });
+});
+
+apiRouter.post("/drafts/batch-delete", (req, res) => {
+  const schema = z.object({
+    ids: z.array(z.string()).min(1)
+  });
+  const payload = schema.parse(req.body || {});
+  res.json({ success: true, data: { deleted: deleteDrafts(payload.ids) } });
+});
 apiRouter.get("/accounts", (_req, res) => {
   res.json({ success: true, data: listAccounts() });
 });

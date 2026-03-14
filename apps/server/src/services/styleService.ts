@@ -44,6 +44,58 @@ const defaultStyles: Omit<StyleTemplate, "createdAt" | "updatedAt">[] = [
     signature: "署名：你的自媒体账号",
     sceneTags: ["娱乐", "轻内容"],
     isDefault: 0
+  },
+  {
+    id: "style_authoritative",
+    name: "专业权威",
+    description: "适合政策、财经、行业解读类内容。",
+    toneWords: ["专业", "稳健", "有依据"],
+    openingTemplate: "围绕{{title}}，市场和用户关注点正在快速聚焦。与其只看热度，不如把事件放回{{topicType}}语境里看清楚。",
+    structureTemplate: "背景 -> 数据/事实 -> 影响 -> 判断",
+    closingTemplate: "对这类趋势，持续关注比情绪表达更重要。{{signature}}",
+    opinionTemplate: "真正值得注意的，往往不是单次情绪波动，而是它背后正在形成的长期趋势。",
+    signature: "分析：你的自媒体账号",
+    sceneTags: ["政策", "财经", "行业"],
+    isDefault: 0
+  },
+  {
+    id: "style_warm",
+    name: "温和共情",
+    description: "适合民生、教育、职场、生活方式类内容。",
+    toneWords: ["温和", "共情", "有温度"],
+    openingTemplate: "{{title}}之所以让很多人停下来关注，不只是因为它在热搜上，更因为它和很多人的真实生活有关。",
+    structureTemplate: "事件 -> 人群感受 -> 影响 -> 温和收束",
+    closingTemplate: "如果你也有类似感受，欢迎把真实想法写在评论区。{{signature}}",
+    opinionTemplate: "很多热点能被记住，不是因为声音最大，而是因为它说中了普通人的日常处境。",
+    signature: "记录：你的自媒体账号",
+    sceneTags: ["民生", "教育", "职场"],
+    isDefault: 0
+  },
+  {
+    id: "style_data",
+    name: "数据拆解",
+    description: "适合科技、商业、平台变化类热点。",
+    toneWords: ["数据感", "结构化", "理性"],
+    openingTemplate: "{{title}}这波讨论里，最值得看的不是情绪，而是几个已经浮出水面的关键信号。",
+    structureTemplate: "结论 -> 关键信号 -> 平台差异 -> 趋势判断",
+    closingTemplate: "把变量看清楚，往往比站队更有价值。{{signature}}",
+    opinionTemplate: "当数据和用户反馈开始同时指向同一个方向时，这件事往往已经不只是短期热点。",
+    signature: "拆解：你的自媒体账号",
+    sceneTags: ["科技", "商业", "平台"],
+    isDefault: 0
+  },
+  {
+    id: "style_story",
+    name: "故事化表达",
+    description: "适合人物、消费、生活趋势类内容。",
+    toneWords: ["画面感", "代入感", "好读"],
+    openingTemplate: "如果把{{title}}当成一个切口，你会发现，大家讨论的其实不只是这件事本身，而是一整种正在发生的变化。",
+    structureTemplate: "场景开头 -> 事件推进 -> 变化含义 -> 收尾",
+    closingTemplate: "热点会过去，但它留下的问题往往会继续存在。{{signature}}",
+    opinionTemplate: "真正打动人的内容，不是把信息堆满，而是把变化讲得让人能感受到。",
+    signature: "撰稿：你的自媒体账号",
+    sceneTags: ["人物", "消费", "生活"],
+    isDefault: 0
   }
 ];
 

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="draft.id" class="editor-page">
     <el-row :gutter="16" class="editor-layout">
       <el-col :span="15" class="editor-left-col">
@@ -7,7 +7,11 @@
             <div class="editor-header">
               <span>{{ texts.editorTitle }}</span>
               <el-space wrap>
+                <el-select v-model="draft.styleId" style="width: 180px">
+                  <el-option v-for="item in styles" :key="item.id" :label="item.name" :value="item.id" />
+                </el-select>
                 <el-select v-model="draftLengthMode" style="width: 140px">
+                  <el-option :label="texts.simpleMode" value="simple" />
                   <el-option :label="texts.mediumMode" value="medium" />
                   <el-option :label="texts.detailedMode" value="detailed" />
                 </el-select>
@@ -29,6 +33,11 @@
               <el-form-item :label="texts.coverImage">
                 <el-input v-model="draft.coverImage" />
               </el-form-item>
+              <el-form-item :label="texts.style">
+                <el-select v-model="draft.styleId" style="width: 220px">
+                  <el-option v-for="item in styles" :key="item.id" :label="item.name" :value="item.id" />
+                </el-select>
+              </el-form-item>
               <el-form-item :label="texts.titleOptions">
                 <el-space wrap>
                   <el-tag
@@ -43,6 +52,7 @@
               </el-form-item>
               <el-form-item :label="texts.lengthMode">
                 <el-select v-model="draftLengthMode" style="width: 180px">
+                  <el-option :label="texts.simpleMode" value="simple" />
                   <el-option :label="texts.mediumMode" value="medium" />
                   <el-option :label="texts.detailedMode" value="detailed" />
                 </el-select>
@@ -124,32 +134,35 @@ import { api } from "../../api/modules";
 const route = useRoute();
 const draft = reactive<Record<string, any>>({});
 const versions = ref<Array<Record<string, unknown>>>([]);
+const styles = ref<Array<Record<string, any>>>([]);
 const draftLengthMode = ref("medium");
 
 const texts = {
-  editorTitle: "\u7a3f\u4ef6\u7f16\u8f91",
-  refreshVersions: "\u5237\u65b0\u7248\u672c",
-  saveDraft: "\u4fdd\u5b58\u7a3f\u4ef6",
-  regenerate: "\u4e0d\u559c\u6b22\uff0c\u91cd\u65b0\u751f\u6210",
-  title: "\u6807\u9898",
-  summary: "\u6458\u8981",
-  coverImage: "\u5c01\u9762\u56fe",
-  titleOptions: "\u6807\u9898\u5907\u9009",
-  lengthMode: "\u7a3f\u4ef6\u7bc7\u5e45",
-  mediumMode: "\u4e2d\u7b49\u5185\u5bb9",
-  detailedMode: "\u8be6\u7ec6\u5185\u5bb9",
-  content: "\u6b63\u6587",
-  status: "\u72b6\u6001",
-  draftStatus: "\u8349\u7a3f",
-  readyStatus: "\u53ef\u53d1\u5e03",
-  publishedStatus: "\u5df2\u53d1\u5e03",
-  qualityTips: "\u8d28\u91cf\u63d0\u793a",
-  originality: "\u539f\u521b\u5ea6\u4f30\u7b97\uff1a",
-  noIssue: "\u6682\u672a\u53d1\u73b0\u660e\u663e\u95ee\u9898",
-  preview: "\u56fe\u6587\u9884\u89c8",
-  versions: "\u7248\u672c\u8bb0\u5f55",
-  versionPrefix: "\u7b2c",
-  versionSuffix: "\u7248"
+  editorTitle: "稿件编辑",
+  refreshVersions: "刷新版本",
+  saveDraft: "保存稿件",
+  regenerate: "不喜欢，重新生成",
+  title: "标题",
+  summary: "摘要",
+  coverImage: "封面图",
+  style: "生成风格",
+  titleOptions: "标题备选",
+  lengthMode: "稿件篇幅",
+  simpleMode: "简单内容",
+  mediumMode: "中等内容",
+  detailedMode: "详细内容",
+  content: "正文",
+  status: "状态",
+  draftStatus: "草稿",
+  readyStatus: "可发布",
+  publishedStatus: "已发布",
+  qualityTips: "质量提示",
+  originality: "原创度估算：",
+  noIssue: "暂未发现明显问题",
+  preview: "图文预览",
+  versions: "版本记录",
+  versionPrefix: "第",
+  versionSuffix: "版"
 };
 
 const previewBlocks = computed(() => {
@@ -173,6 +186,11 @@ async function load() {
   draftLengthMode.value = response.data?.lengthMode || "medium";
 }
 
+async function loadStyles() {
+  const response = await api.getStyles();
+  styles.value = response.data;
+}
+
 async function loadVersions() {
   const response = await api.getDraftVersions(String(route.params.id));
   versions.value = response.data;
@@ -187,9 +205,10 @@ async function save() {
     status: draft.status,
     images: draft.images,
     titleOptions: draft.titleOptions,
+    styleId: draft.styleId,
     lengthMode: draftLengthMode.value
   });
-  ElMessage.success("\u7a3f\u4ef6\u5df2\u4fdd\u5b58");
+  ElMessage.success("稿件已保存");
   await load();
   await loadVersions();
 }
@@ -201,13 +220,12 @@ async function regenerate() {
   });
   Object.assign(draft, response.data || {});
   draftLengthMode.value = response.data?.lengthMode || draftLengthMode.value;
-  ElMessage.success("\u5df2\u6309\u65b0\u7684\u7bc7\u5e45\u548c\u5185\u5bb9\u91cd\u65b0\u751f\u6210");
+  ElMessage.success("已按新的篇幅和风格重新生成");
   await loadVersions();
 }
 
 onMounted(async () => {
-  await load();
-  await loadVersions();
+  await Promise.all([load(), loadStyles(), loadVersions()]);
 });
 </script>
 

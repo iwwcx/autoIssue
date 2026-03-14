@@ -1,9 +1,9 @@
-import { http } from "./http";
+﻿import { http } from "./http";
 
 export const api = {
   getDashboard: () => http.get("/dashboard/overview"),
   getHotspots: (params: Record<string, unknown>) => http.get("/hotspots", { params }),
-  runCrawler: (payload?: { limit?: number; platform?: string }) => http.post("/crawler/run", payload || {}),
+  runCrawler: (payload?: { limit?: number; platform?: string; keyword?: string; topicType?: string }) => http.post("/crawler/run", payload || {}),
   updateHotspotStatus: (id: string, status: string) => http.post(`/hotspots/${id}/status`, { status }),
   deleteHotspot: (id: string) => http.delete(`/hotspots/${id}`),
   aggregateHotspot: (id: string) => http.post(`/hotspots/${id}/aggregate`),
@@ -13,6 +13,8 @@ export const api = {
   regenerateDraft: (id: string, payload?: { styleId?: string; lengthMode?: string }) => http.post(`/drafts/${id}/regenerate`, payload || {}),
   updateDraft: (id: string, payload: Record<string, unknown>) => http.put(`/drafts/${id}`, payload),
   getDraftVersions: (id: string) => http.get(`/drafts/${id}/versions`),
+  deleteDraft: (id: string) => http.delete(`/drafts/${id}`),
+  batchDeleteDrafts: (ids: string[]) => http.post("/drafts/batch-delete", { ids }),
   getAccounts: () => http.get("/accounts"),
   createAccount: (payload: Record<string, unknown>) => http.post("/accounts", payload),
   updateAccount: (id: string, payload: Record<string, unknown>) => http.put(`/accounts/${id}`, payload),
