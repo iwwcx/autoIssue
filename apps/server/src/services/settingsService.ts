@@ -1,4 +1,5 @@
 ﻿import { db } from "../config/database";
+import { env } from "../config/env";
 import { createId } from "../shared/text";
 import { parseJson, toJson } from "../shared/json";
 import type { CrawlConfig, GenerationConfig } from "../types";
@@ -10,12 +11,12 @@ const now = () => new Date().toISOString();
 const defaultCrawlConfig: CrawlConfig = {
   autoCrawl: true,
   frequencyMinutes: 20,
-  enabledPlatforms: ["douyin", "xiaohongshu", "weibo"],
-  keywords: ["\u6c11\u751f", "\u79d1\u6280", "\u5a31\u4e50"],
+  enabledPlatforms: ["sixty_seconds", "netease", "google_news"],
+  keywords: ["AI", "科技", "财经"],
   blockedWords: ["\u5e7f\u544a", "\u62bd\u5956", "\u5e26\u8d27\u8fd4\u5229"],
   blockedAccounts: [],
   withinHours: 1,
-  maxPerPlatform: 20
+  maxPerPlatform: 30
 };
 
 const defaultGenerationConfig: GenerationConfig = {
@@ -70,10 +71,21 @@ export function setSetting(key: SettingKey, value: unknown): void {
 
 export function getCrawlConfig(): CrawlConfig {
   const saved = getSetting<CrawlConfig>("crawlConfig", defaultCrawlConfig);
-  return {
+  const merged = {
     ...defaultCrawlConfig,
-    ...saved,
-    maxPerPlatform: Math.min(30, Math.max(5, Number(saved.maxPerPlatform || defaultCrawlConfig.maxPerPlatform)))
+    ...saved
+  };
+  const builtInNewsPlatforms = new Set(["sixty_seconds", "netease", "google_news", "gnews", "newsapi", "juhe_news", "alapi_toutiao", "newsdata", "the_news_api"]);
+  const availablePlatforms = (merged.enabledPlatforms || []).filter((platform) => builtInNewsPlatforms.has(platform));
+  const enabledPlatforms =
+    env.newsProvider === "mock" || availablePlatforms.length >= 2
+      ? (merged.enabledPlatforms || defaultCrawlConfig.enabledPlatforms)
+      : defaultCrawlConfig.enabledPlatforms;
+
+  return {
+    ...merged,
+    enabledPlatforms,
+    maxPerPlatform: Math.min(30, Math.max(5, Number(merged.maxPerPlatform || defaultCrawlConfig.maxPerPlatform)))
   };
 }
 
@@ -102,3 +114,9 @@ export function getLastCrawlAt(): string | null {
 export function setLastCrawlAt(value: string): void {
   setSetting("lastCrawlAt", { value });
 }
+
+
+
+
+
+

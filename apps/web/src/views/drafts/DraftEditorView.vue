@@ -1,23 +1,28 @@
-﻿<template>
-  <div v-if="draft.id" class="editor-page">
+<template>
+  <div v-loading="pageLoading" class="editor-page">
     <el-row :gutter="16" class="editor-layout">
       <el-col :span="15" class="editor-left-col">
         <el-card class="page-card editor-card">
           <template #header>
             <div class="editor-header">
-              <span>{{ texts.editorTitle }}</span>
+              <span class="header-title">
+                <el-icon><EditPen /></el-icon>
+                <span>{{ texts.editorTitle }}</span>
+              </span>
               <el-space wrap>
-                <el-select v-model="draft.styleId" style="width: 180px">
+                <el-select v-model="draft.styleId" style="width: 180px" :disabled="pageLoading || saveLoading || regenerateLoading">
                   <el-option v-for="item in styles" :key="item.id" :label="item.name" :value="item.id" />
                 </el-select>
-                <el-select v-model="draftLengthMode" style="width: 140px">
-                  <el-option :label="texts.simpleMode" value="simple" />
-                  <el-option :label="texts.mediumMode" value="medium" />
-                  <el-option :label="texts.detailedMode" value="detailed" />
-                </el-select>
-                <el-button @click="regenerate">{{ texts.regenerate }}</el-button>
-                <el-button @click="loadVersions">{{ texts.refreshVersions }}</el-button>
-                <el-button type="primary" @click="save">{{ texts.saveDraft }}</el-button>
+
+                <el-button :loading="regenerateLoading" @click="regenerate">
+                  <el-icon><RefreshRight /></el-icon>
+                  <span>{{ texts.regenerate }}</span>
+                </el-button>
+
+                <el-button type="primary" :loading="saveLoading" @click="save">
+                  <el-icon><FolderChecked /></el-icon>
+                  <span>{{ texts.saveDraft }}</span>
+                </el-button>
               </el-space>
             </div>
           </template>
@@ -50,13 +55,7 @@
                   </el-tag>
                 </el-space>
               </el-form-item>
-              <el-form-item :label="texts.lengthMode">
-                <el-select v-model="draftLengthMode" style="width: 180px">
-                  <el-option :label="texts.simpleMode" value="simple" />
-                  <el-option :label="texts.mediumMode" value="medium" />
-                  <el-option :label="texts.detailedMode" value="detailed" />
-                </el-select>
-              </el-form-item>
+
               <el-form-item :label="texts.content">
                 <el-input v-model="draft.content" type="textarea" :rows="22" />
               </el-form-item>
@@ -74,11 +73,23 @@
 
       <el-col :span="9" class="editor-right-col">
         <div class="right-panel-scroll">
-          <el-card class="page-card" style="margin-bottom: 16px">
+          <el-card class="page-card" style="margin-bottom: 16px" v-loading="pageLoading">
             <template #header>
-              <div style="font-weight: 700">{{ texts.qualityTips }}</div>
+              <div class="panel-title">
+                <el-icon><Opportunity /></el-icon>
+                <span>{{ texts.qualityTips }}</span>
+              </div>
             </template>
-            <div style="margin-bottom: 12px">{{ texts.originality }}<strong>{{ draft.originalityScore }}</strong></div>
+            <div class="quality-score-row">
+              <span class="quality-score-label">{{ texts.originality }}</span>
+              <strong>{{ draft.originalityScore }}</strong>
+            </div>
+            <div class="quality-source-row">
+              <span class="quality-score-label">{{ texts.generationSource }}</span>
+              <el-tag :class="draftGenerationSourceTagClass(draft.generationSource)" class="soft-tag" effect="light">
+                {{ draftGenerationSourceLabel(draft.generationSource) }}
+              </el-tag>
+            </div>
             <el-empty v-if="!draft.errorReport?.length" :description="texts.noIssue" />
             <el-alert
               v-for="item in draft.errorReport || []"
@@ -91,9 +102,12 @@
             />
           </el-card>
 
-          <el-card class="page-card" style="margin-bottom: 16px">
+          <el-card class="page-card" style="margin-bottom: 16px" v-loading="pageLoading">
             <template #header>
-              <div style="font-weight: 700">{{ texts.preview }}</div>
+              <div class="panel-title">
+                <el-icon><Picture /></el-icon>
+                <span>{{ texts.preview }}</span>
+              </div>
             </template>
             <div class="article-preview">
               <h2 class="preview-title">{{ draft.title }}</h2>
@@ -105,15 +119,18 @@
             </div>
           </el-card>
 
-          <el-card class="page-card">
+          <el-card class="page-card" v-loading="versionsLoading">
             <template #header>
-              <div style="font-weight: 700">{{ texts.versions }}</div>
+              <div class="panel-title">
+                <el-icon><Clock /></el-icon>
+                <span>{{ texts.versions }}</span>
+              </div>
             </template>
             <el-timeline>
               <el-timeline-item
                 v-for="version in versions"
                 :key="version.id"
-                :timestamp="String(version.createdAt)"
+                :timestamp="formatDateTime(String(version.createdAt))"
               >
                 {{ texts.versionPrefix }} {{ version.versionNo }} {{ texts.versionSuffix }} - {{ version.operatorName }}
               </el-timeline-item>
@@ -129,28 +146,29 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
+import { Clock, EditPen, FolderChecked, Opportunity, Picture, RefreshRight } from "@element-plus/icons-vue";
 import { api } from "../../api/modules";
+import { draftGenerationSourceLabel, draftGenerationSourceTagClass, formatDateTime } from "../../shared/display";
 
 const route = useRoute();
 const draft = reactive<Record<string, any>>({});
 const versions = ref<Array<Record<string, unknown>>>([]);
 const styles = ref<Array<Record<string, any>>>([]);
 const draftLengthMode = ref("medium");
+const pageLoading = ref(false);
+const versionsLoading = ref(false);
+const saveLoading = ref(false);
+const regenerateLoading = ref(false);
 
 const texts = {
   editorTitle: "稿件编辑",
-  refreshVersions: "刷新版本",
   saveDraft: "保存稿件",
-  regenerate: "不喜欢，重新生成",
+  regenerate: "重新生成",
   title: "标题",
   summary: "摘要",
   coverImage: "封面图",
   style: "生成风格",
   titleOptions: "标题备选",
-  lengthMode: "稿件篇幅",
-  simpleMode: "简单内容",
-  mediumMode: "中等内容",
-  detailedMode: "详细内容",
   content: "正文",
   status: "状态",
   draftStatus: "草稿",
@@ -158,6 +176,7 @@ const texts = {
   publishedStatus: "已发布",
   qualityTips: "质量提示",
   originality: "原创度估算：",
+  generationSource: "本次生成来源：",
   noIssue: "暂未发现明显问题",
   preview: "图文预览",
   versions: "版本记录",
@@ -181,9 +200,14 @@ const previewBlocks = computed(() => {
 });
 
 async function load() {
-  const response = await api.getDraft(String(route.params.id));
-  Object.assign(draft, response.data || {});
-  draftLengthMode.value = response.data?.lengthMode || "medium";
+  pageLoading.value = true;
+  try {
+    const response = await api.getDraft(String(route.params.id));
+    Object.assign(draft, response.data || {});
+    draftLengthMode.value = response.data?.lengthMode || "medium";
+  } finally {
+    pageLoading.value = false;
+  }
 }
 
 async function loadStyles() {
@@ -192,36 +216,51 @@ async function loadStyles() {
 }
 
 async function loadVersions() {
-  const response = await api.getDraftVersions(String(route.params.id));
-  versions.value = response.data;
+  versionsLoading.value = true;
+  try {
+    const response = await api.getDraftVersions(String(route.params.id));
+    versions.value = response.data;
+  } finally {
+    versionsLoading.value = false;
+  }
 }
 
 async function save() {
-  await api.updateDraft(String(route.params.id), {
-    title: draft.title,
-    summary: draft.summary,
-    content: draft.content,
-    coverImage: draft.coverImage,
-    status: draft.status,
-    images: draft.images,
-    titleOptions: draft.titleOptions,
-    styleId: draft.styleId,
-    lengthMode: draftLengthMode.value
-  });
-  ElMessage.success("稿件已保存");
-  await load();
-  await loadVersions();
+  saveLoading.value = true;
+  try {
+    await api.updateDraft(String(route.params.id), {
+      title: draft.title,
+      summary: draft.summary,
+      content: draft.content,
+      coverImage: draft.coverImage,
+      status: draft.status,
+      images: draft.images,
+      titleOptions: draft.titleOptions,
+      styleId: draft.styleId,
+      lengthMode: draftLengthMode.value
+    });
+    ElMessage.success("稿件已保存");
+    await load();
+    await loadVersions();
+  } finally {
+    saveLoading.value = false;
+  }
 }
 
 async function regenerate() {
-  const response = await api.regenerateDraft(String(route.params.id), {
-    styleId: draft.styleId,
-    lengthMode: draftLengthMode.value
-  });
-  Object.assign(draft, response.data || {});
-  draftLengthMode.value = response.data?.lengthMode || draftLengthMode.value;
-  ElMessage.success("已按新的篇幅和风格重新生成");
-  await loadVersions();
+  regenerateLoading.value = true;
+  try {
+    const response = await api.regenerateDraft(String(route.params.id), {
+      styleId: draft.styleId,
+      lengthMode: draftLengthMode.value
+    });
+    Object.assign(draft, response.data || {});
+    draftLengthMode.value = response.data?.lengthMode || draftLengthMode.value;
+    ElMessage.success("已按新的风格重新生成");
+    await loadVersions();
+  } finally {
+    regenerateLoading.value = false;
+  }
 }
 
 onMounted(async () => {
@@ -273,6 +312,14 @@ onMounted(async () => {
   font-weight: 700;
 }
 
+.header-title,
+.panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
 .article-preview {
   padding-right: 4px;
 }
@@ -304,4 +351,35 @@ onMounted(async () => {
   margin: 0 0 18px;
   object-fit: cover;
 }
+
+.quality-score-row {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quality-score-label {
+  color: #51617b;
+}
+
+.quality-source-row {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.soft-tag {
+  border: none;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-weight: 600;
+}
 </style>
+
+
+
+
+
+

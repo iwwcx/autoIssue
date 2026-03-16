@@ -96,6 +96,8 @@ function persistHotspot(item: HotspotInput): HotspotRecord {
     id: existing?.id || createId("hot"),
     fingerprint,
     ...item,
+    accountId: item.accountId ?? undefined,
+    coverImage: item.coverImage ?? undefined,
     captureTime: timestamp,
     heatScore,
     qualityScore,
@@ -128,8 +130,10 @@ function persistHotspot(item: HotspotInput): HotspotRecord {
       heatScore = excluded.heatScore,
       qualityScore = excluded.qualityScore,
       updatedAt = excluded.updatedAt
-  `).run({
+    `).run({
     ...hotspot,
+    accountId: hotspot.accountId ?? null,
+    coverImage: hotspot.coverImage ?? null,
     mediaJson: toJson(hotspot.media),
     tagsJson: toJson(hotspot.tags),
     rawJson: toJson(hotspot.raw || {})
@@ -144,11 +148,11 @@ export async function crawlHotspots(options?: { limit?: number; platform?: strin
   items: HotspotRecord[];
 }> {
   const config = getCrawlConfig();
-  const requestedLimit = clamp(Number(options?.limit || 8), 1, 30);
+  const requestedLimit = clamp(Number(options?.limit || 5), 1, 30);
   const requestedKeyword = String(options?.keyword || '').trim();
   const requestedTopicType = String(options?.topicType || '').trim();
-  const effectiveKeywords = requestedKeyword ? [requestedKeyword] : config.keywords;
-  const platforms = options?.platform ? [options.platform as SourcePlatform] : config.enabledPlatforms;
+  const effectiveKeywords = requestedKeyword ? [requestedKeyword] : options ? [] : config.keywords;
+  const platforms = options?.platform ? [options.platform as SourcePlatform] : pickDistinct(["sixty_seconds" as SourcePlatform, ...config.enabledPlatforms], (item) => item);
   const seed = Date.now() % 1000;
   const candidates: HotspotInput[] = [];
 
@@ -158,15 +162,22 @@ export async function crawlHotspots(options?: { limit?: number; platform?: strin
       continue;
     }
 
-    const fetched = await adapter.fetchTrending({
-      keywords: effectiveKeywords,
-      blockedAccounts: config.blockedAccounts,
-      blockedWords: config.blockedWords,
-      withinHours: config.withinHours,
-      limit: Math.min(30, Math.max(requestedLimit * 2, 8)),
-      seed: seed + index * 29
-    });
-    fetched.forEach((item) => candidates.push(item));
+    try {
+      const fetched = await adapter.fetchTrending({
+        keywords: effectiveKeywords,
+        blockedAccounts: config.blockedAccounts,
+        blockedWords: config.blockedWords,
+        withinHours: config.withinHours,
+        limit: Math.min(30, Math.max(requestedLimit * 2, 8)),
+        seed: seed + index * 29
+      });
+      fetched.forEach((item) => candidates.push(item));
+    } catch (error) {
+      if (platforms.length === 1) {
+        throw error;
+      }
+      console.warn(`[crawl-skip] ${platform}`, error);
+    }
   }
 
   const selected = pickDistinct(
@@ -347,3 +358,12 @@ export async function aggregateHotspot(hotspotId: string): Promise<AggregationRe
 
   return aggregation;
 }
+
+
+
+
+
+
+
+
+

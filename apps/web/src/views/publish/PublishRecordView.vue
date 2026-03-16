@@ -2,9 +2,12 @@
   <div>
     <el-row :gutter="16">
       <el-col :span="10">
-        <el-card class="page-card">
+        <el-card class="page-card" v-loading="baseLoading">
           <template #header>
-            <div style="font-weight: 700">创建发布任务</div>
+            <div class="header-title">
+              <el-icon><Promotion /></el-icon>
+              <span>创建发布任务</span>
+            </div>
           </template>
           <el-form label-width="110px">
             <el-form-item label="选择稿件">
@@ -42,8 +45,14 @@
             </el-form-item>
             <el-form-item>
               <el-space>
-                <el-button type="primary" @click="createJob">提交发布任务</el-button>
-                <el-button @click="refreshMetrics">刷新数据</el-button>
+                <el-button type="primary" :loading="createLoading" @click="createJob">
+                  <el-icon><CirclePlus /></el-icon>
+                  <span>提交发布任务</span>
+                </el-button>
+                <el-button :loading="refreshLoading" @click="refreshMetrics">
+                  <el-icon><RefreshRight /></el-icon>
+                  <span>刷新数据</span>
+                </el-button>
               </el-space>
             </el-form-item>
           </el-form>
@@ -51,9 +60,12 @@
       </el-col>
 
       <el-col :span="14">
-        <el-card class="page-card">
+        <el-card class="page-card" v-loading="baseLoading">
           <template #header>
-            <div style="font-weight: 700">发布记录</div>
+            <div class="header-title">
+              <el-icon><Tickets /></el-icon>
+              <span>发布记录</span>
+            </div>
           </template>
           <el-table :data="records" stripe empty-text="暂无发布记录">
             <el-table-column prop="draftTitle" label="稿件标题" min-width="220" />
@@ -71,7 +83,11 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="scheduledAt" label="发布时间" width="180" />
+            <el-table-column label="发布时间" width="190">
+              <template #default="scope">
+                {{ formatDateTime(scope.row.scheduledAt) }}
+              </template>
+            </el-table-column>
             <el-table-column label="目标结果" min-width="280">
               <template #default="scope">
                 <div v-for="item in scope.row.targets" :key="item.id" class="target-result">
@@ -85,7 +101,7 @@
             </el-table-column>
             <el-table-column label="操作" width="120">
               <template #default="scope">
-                <el-button link type="primary" @click="execute(scope.row.id)">立即执行</el-button>
+                <el-button link type="primary" :loading="executeLoadingId === String(scope.row.id)" @click="execute(scope.row.id)">立即执行</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -98,9 +114,11 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { CirclePlus, Promotion, RefreshRight, Tickets } from "@element-plus/icons-vue";
 import { api } from "../../api/modules";
 import { useAppStore } from "../../stores/app";
 import {
+  formatDateTime,
   platformLabel,
   platformTagClass,
   publishModeLabel,
@@ -112,6 +130,10 @@ const appStore = useAppStore();
 const drafts = ref<Array<Record<string, any>>>([]);
 const accounts = ref<Array<Record<string, any>>>([]);
 const records = ref<Array<Record<string, any>>>([]);
+const baseLoading = ref(false);
+const createLoading = ref(false);
+const refreshLoading = ref(false);
+const executeLoadingId = ref("");
 const form = reactive({
   draftId: "",
   scheduledAt: "",
@@ -123,14 +145,19 @@ function filteredAccounts(platform: string) {
 }
 
 async function loadBase() {
-  const [draftRes, accountRes, recordRes] = await Promise.all([
-    api.getDrafts(),
-    api.getAccounts(),
-    api.getPublishRecords()
-  ]);
-  drafts.value = draftRes.data;
-  accounts.value = accountRes.data;
-  records.value = recordRes.data;
+  baseLoading.value = true;
+  try {
+    const [draftRes, accountRes, recordRes] = await Promise.all([
+      api.getDrafts(),
+      api.getAccounts(),
+      api.getPublishRecords()
+    ]);
+    drafts.value = draftRes.data;
+    accounts.value = accountRes.data;
+    records.value = recordRes.data;
+  } finally {
+    baseLoading.value = false;
+  }
 }
 
 async function createJob() {
@@ -145,33 +172,55 @@ async function createJob() {
     return;
   }
 
-  await api.createPublishJob({
-    draftId: form.draftId,
-    scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : undefined,
-    targets: validTargets
-  });
-  ElMessage.success("发布任务已创建");
-  form.targets = [{ platform: "netease", accountId: "" }];
-  form.scheduledAt = "";
-  await loadBase();
+  createLoading.value = true;
+  try {
+    await api.createPublishJob({
+      draftId: form.draftId,
+      scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : undefined,
+      targets: validTargets
+    });
+    ElMessage.success("发布任务已创建");
+    form.targets = [{ platform: "netease", accountId: "" }];
+    form.scheduledAt = "";
+    await loadBase();
+  } finally {
+    createLoading.value = false;
+  }
 }
 
 async function execute(id: string) {
-  await api.executeJob(id);
-  ElMessage.success("任务已执行");
-  await loadBase();
+  executeLoadingId.value = String(id);
+  try {
+    await api.executeJob(id);
+    ElMessage.success("任务已执行");
+    await loadBase();
+  } finally {
+    executeLoadingId.value = "";
+  }
 }
 
 async function refreshMetrics() {
-  await api.refreshMetrics();
-  ElMessage.success("数据已刷新");
-  await loadBase();
+  refreshLoading.value = true;
+  try {
+    await api.refreshMetrics();
+    ElMessage.success("数据已刷新");
+    await loadBase();
+  } finally {
+    refreshLoading.value = false;
+  }
 }
 
 onMounted(loadBase);
 </script>
 
 <style scoped>
+.header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
 .target-row {
   display: flex;
   gap: 10px;
@@ -209,3 +258,4 @@ onMounted(loadBase);
 .status-running { color: #7c3aed; background: rgba(196, 181, 253, 0.22); }
 .status-failed { color: #b91c1c; background: rgba(252, 165, 165, 0.22); }
 </style>
+

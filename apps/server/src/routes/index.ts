@@ -72,7 +72,7 @@ apiRouter.post("/crawler/run", async (req, res, next) => {
       limit: z.number().int().min(1).max(30).optional(),
       keyword: z.string().optional(),
       topicType: z.string().optional(),
-      platform: z.enum(["douyin", "xiaohongshu", "weibo", "weixin", "baidu", "toutiao"]).optional(),
+      platform: z.enum(["douyin", "xiaohongshu", "weibo", "weixin", "baidu", "toutiao", "netease", "google_news", "gnews", "newsapi", "juhe_news", "alapi_toutiao", "newsdata", "the_news_api", "sixty_seconds"]).optional(),
       replaceExisting: z.boolean().optional()
     });
     const payload = schema.parse({ replaceExisting: true, ...(req.body || {}) });
@@ -250,3 +250,7 @@ apiRouter.post("/publish/metrics/refresh", async (_req, res, next) => {
 apiRouter.get("/analytics/overview", (_req, res) => {
   res.json({ success: true, data: getDashboardOverview() });
 });
+
+
+
+

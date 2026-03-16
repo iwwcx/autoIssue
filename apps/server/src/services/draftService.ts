@@ -1,4 +1,4 @@
-﻿import { db } from "../config/database";
+import { db } from "../config/database";
 import { getRelevantImageCandidates } from "../shared/imageTheme";
 import { parseJson, toJson } from "../shared/json";
 import {
@@ -10,9 +10,11 @@ import {
   pickDistinct
 } from "../shared/text";
 import { getCrawlConfig, getGenerationConfig } from "./settingsService";
+import { generateDraftWithAi, isAiDraftEnabled } from "./aiService";
 import { aggregateHotspot, getAggregationByHotspotId, getHotspotById } from "./hotspotService";
 import { getDefaultStyle, getStyleById } from "./styleService";
 import type {
+  DraftGenerationSource,
   DraftImageBlock,
   DraftLengthMode,
   DraftRecord,
@@ -49,18 +51,81 @@ function normalizeLengthMode(lengthMode?: string): DraftLengthMode {
   return "medium";
 }
 
+function decodeHtmlEntities(input: string): string {
+  let output = input;
+  const namedEntities: Record<string, string> = {
+    "&nbsp;": " ",
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&#39;": "'",
+    "&ldquo;": "“",
+    "&rdquo;": "”",
+    "&lsquo;": "‘",
+    "&rsquo;": "’",
+    "&mdash;": "-",
+    "&hellip;": "..."
+  };
+
+  for (let index = 0; index < 3; index += 1) {
+    const previous = output;
+    Object.entries(namedEntities).forEach(([entity, value]) => {
+      output = output.replaceAll(entity, value);
+    });
+    output = output.replace(/&#x([0-9a-fA-F]+);/g, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)));
+    output = output.replace(/&#([0-9]+);/g, (_, code) => String.fromCodePoint(Number.parseInt(code, 10)));
+    if (output === previous) {
+      break;
+    }
+  }
+
+  return output;
+}
+
+function cleanText(input?: string): string {
+  return decodeHtmlEntities(String(input || ""))
+    .replace(/<!\[CDATA\[|\]\]>/g, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\b(?:href|target|style|class|id|rel|src|color)\s*=\s*["'][^"']*["']/gi, " ")
+    .replace(/&[a-zA-Z0-9#]+;/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanDraftContent(input?: string): string {
+  return decodeHtmlEntities(String(input || ""))
+    .replace(/<!\[CDATA\[|\]\]>/g, "")
+    .replace(/<a\b[^>]*>(.*?)<\/a>/gi, "$1")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\b(?:href|target|style|class|id|rel|src|color)\s*=\s*["'][^"']*["']/gi, " ")
+    .replace(/&[a-zA-Z0-9#]+;/g, " ")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function cleanTextList(items: string[], limit?: number): string[] {
+  const cleaned = items.map((item) => cleanText(item)).filter(Boolean);
+  return typeof limit === "number" ? cleaned.slice(0, limit) : cleaned;
+}
+
 function mapDraft(row: Record<string, unknown>): DraftRecord {
   return {
     id: String(row.id),
     hotspotId: String(row.hotspotId),
     styleId: String(row.styleId),
-    title: String(row.title),
-    summary: String(row.summary),
-    content: String(row.content),
+    title: cleanText(String(row.title)),
+    summary: cleanText(String(row.summary)),
+    content: cleanDraftContent(String(row.content)),
     coverImage: row.coverImage ? String(row.coverImage) : undefined,
     images: parseJson<DraftImageBlock[]>(String(row.imagesJson), []),
-    titleOptions: parseJson<string[]>(String(row.titleOptionsJson), []),
+    titleOptions: parseJson<string[]>(String(row.titleOptionsJson), []).map((item) => cleanText(item)).filter(Boolean),
     lengthMode: normalizeLengthMode(String(row.lengthMode || "medium")),
+    generationSource: String(row.generationSource || "template_fallback") as DraftGenerationSource,
     status: row.status as DraftStatus,
     originalityScore: Number(row.originalityScore),
     errorReport: parseJson<string[]>(String(row.errorReportJson), []),
@@ -74,8 +139,8 @@ function mapVersion(row: Record<string, unknown>): DraftVersionRecord {
     id: String(row.id),
     draftId: String(row.draftId),
     versionNo: Number(row.versionNo),
-    title: String(row.title),
-    content: String(row.content),
+    title: cleanText(String(row.title)),
+    content: cleanDraftContent(String(row.content)),
     images: parseJson<DraftImageBlock[]>(String(row.imagesJson), []),
     operatorName: String(row.operatorName),
     createdAt: String(row.createdAt)
@@ -163,14 +228,13 @@ function buildImageMarkdown(images: DraftImageBlock[], index: number): string {
 function buildSourceSummary(relatedSources: Array<{ platform: string; title: string; summary: string }>, lengthMode: DraftLengthMode): string[] {
   const limit = lengthMode === "simple" ? 2 : lengthMode === "detailed" ? 5 : 3;
   return relatedSources.slice(0, limit).map((item) => {
-    return `${platformLabel(item.platform)}\u7aef\u91cd\u70b9\u5728\u201c${item.title}\u201d\uff0c\u6838\u5fc3\u8ba8\u8bba\u96c6\u4e2d\u5728\uff1a${item.summary}`;
+    return `${platformLabel(item.platform)}端重点在“${cleanText(item.title)}”，核心讨论集中在：${cleanText(item.summary)}`;
   });
 }
 
 function buildCoreFacts(coreFacts: string[], lengthMode: DraftLengthMode): string {
   const limit = lengthMode === "simple" ? 2 : lengthMode === "detailed" ? 5 : 3;
-  return coreFacts
-    .slice(0, limit)
+  return cleanTextList(coreFacts, limit)
     .map((item, index) => `${index + 1}. ${item}`)
     .join("\n");
 }
@@ -292,7 +356,7 @@ function saveVersion(draft: DraftRecord, operatorName: string): void {
   });
 }
 
-function createDraftPayload(input: {
+async function createDraftPayload(input: {
   hotspotId: string;
   styleId?: string;
   lengthMode?: string;
@@ -301,58 +365,194 @@ function createDraftPayload(input: {
 }) {
   const hotspot = getHotspotById(input.hotspotId);
   if (!hotspot) {
-    throw new Error("\u70ed\u70b9\u4e0d\u5b58\u5728");
+    throw new Error("热点不存在");
   }
 
   const aggregation = getAggregationByHotspotId(input.hotspotId);
-  return Promise.resolve(aggregation || aggregateHotspot(input.hotspotId)).then((resolvedAggregation) => {
-    const style = input.styleId ? getStyleById(input.styleId) || getDefaultStyle() : getDefaultStyle();
-    const lengthMode = normalizeLengthMode(input.lengthMode || getGenerationConfig().defaultLengthMode);
-    const titleOptions = buildTitleOptions(hotspot.title, hotspot.topicType, lengthMode);
-    const summaryBase = input.referenceSummary || hotspot.summary;
-    const summary =
-      lengthMode === "detailed"
-        ? `${summaryBase} \u7ed3\u5408\u5df2\u542f\u7528\u5e73\u53f0\u7684\u8865\u5145\u4fe1\u606f\u6765\u770b\uff0c\u8fd9\u6761\u70ed\u70b9\u5df2\u7ecf\u4ece\u5355\u4e00\u4e8b\u4ef6\u5ef6\u4f38\u5230\u66f4\u5e7f\u7684\u884c\u4e1a\u3001\u7528\u6237\u548c\u4f20\u64ad\u5f71\u54cd\u3002`
-        : `${summaryBase} \u7efc\u5408\u76f8\u5173\u5e73\u53f0\u4fe1\u606f\u540e\uff0c\u8fd9\u6761\u8bdd\u9898\u7684\u5173\u6ce8\u70b9\u4e0d\u53ea\u5728\u70ed\u5ea6\uff0c\u8fd8\u5728\u5b83\u53ef\u80fd\u5e26\u6765\u7684\u5b9e\u9645\u53d8\u5316\u3002`;
-    const images = buildImages({
-      title: hotspot.title,
-      summary,
-      topicType: hotspot.topicType,
-      coverImage: hotspot.coverImage,
-      hotspotMedia: hotspot.media,
-      relatedImages: resolvedAggregation.relatedImages,
-      lengthMode
-    });
-    const content = buildContent(style, {
-      title: hotspot.title,
-      summary,
-      topicType: hotspot.topicType,
-      accountName: hotspot.accountName,
-      aggregationSummary: resolvedAggregation.summary,
-      coreFacts: resolvedAggregation.coreFacts,
-      relatedSources: resolvedAggregation.relatedSources.map((item) => ({
-        platform: item.platform,
-        title: item.title,
-        summary: item.summary
-      })),
-      images,
-      lengthMode,
-      referenceSummary: input.referenceSummary
-    });
-
-    return {
-      hotspot,
-      style,
-      lengthMode,
-      titleOptions,
-      images,
-      summary,
-      content,
-      status: input.currentStatus || "draft"
-    };
+  const resolvedAggregation = await Promise.resolve(aggregation || aggregateHotspot(input.hotspotId));
+  const style = input.styleId ? getStyleById(input.styleId) || getDefaultStyle() : getDefaultStyle();
+  const lengthMode = normalizeLengthMode(input.lengthMode || getGenerationConfig().defaultLengthMode);
+  const title = cleanText(hotspot.title);
+  const topicType = cleanText(hotspot.topicType) || "资讯";
+  const accountName = cleanText(hotspot.accountName) || "热点来源";
+  const fallbackTitleOptions = buildTitleOptions(title, topicType, lengthMode);
+  const summaryBase = cleanText(input.referenceSummary || hotspot.summary || hotspot.content || hotspot.title);
+  const fallbackSummary =
+    lengthMode === "detailed"
+      ? `${summaryBase} 结合已抓取到的平台补充信息，这条热点已经不只是单点事件，而是延伸到了更广的行业、用户和传播影响。`
+      : `${summaryBase} 综合相关平台信息后，这条话题的关注点不只在热度，还在它可能带来的实际变化。`;
+  const relatedImages = pickDistinct((resolvedAggregation.relatedImages || []).filter(Boolean), (item) => item);
+  const coreFacts = cleanTextList(
+    resolvedAggregation.coreFacts || [],
+    lengthMode === "simple" ? 2 : lengthMode === "detailed" ? 5 : 3
+  );
+  const aggregationSummary = cleanText(resolvedAggregation.summary || coreFacts.join("；") || summaryBase);
+  const relatedSources = (resolvedAggregation.relatedSources || [])
+    .map((item) => ({
+      platform: item.platform,
+      title: cleanText(item.title),
+      summary: cleanText(item.summary)
+    }))
+    .filter((item) => item.title || item.summary);
+  const images = buildImages({
+    title,
+    summary: fallbackSummary,
+    topicType,
+    coverImage: hotspot.coverImage,
+    hotspotMedia: hotspot.media,
+    relatedImages,
+    lengthMode
   });
+  const fallbackContent = cleanDraftContent(
+    buildContent(style, {
+      title,
+      summary: fallbackSummary,
+      topicType,
+      accountName,
+      aggregationSummary,
+      coreFacts: coreFacts.length > 0 ? coreFacts : [summaryBase],
+      relatedSources,
+      images,
+      lengthMode,
+      referenceSummary: cleanText(input.referenceSummary)
+    })
+  );
+
+  let titleOptions = fallbackTitleOptions;
+  let summary = fallbackSummary;
+  let content = fallbackContent;
+  let generationSource: DraftGenerationSource = "template_fallback";
+
+  if (isAiDraftEnabled()) {
+    try {
+      const aiDraft = await generateDraftWithAi({
+        title,
+        topicType,
+        summary: fallbackSummary,
+        accountName,
+        aggregationSummary,
+        coreFacts: coreFacts.length > 0 ? coreFacts : [summaryBase],
+        relatedSources,
+        style,
+        lengthMode,
+        referenceSummary: cleanText(input.referenceSummary),
+        images
+      });
+
+      titleOptions = pickDistinct(
+        [cleanText(aiDraft.title), ...aiDraft.titleOptions.map((item) => cleanText(item)), ...fallbackTitleOptions].filter(Boolean),
+        (item) => item
+      ).slice(0, 5);
+      summary = cleanText(aiDraft.summary || fallbackSummary) || fallbackSummary;
+      content = cleanDraftContent(aiDraft.content || fallbackContent) || fallbackContent;
+      generationSource = aiDraft.generationSource;
+    } catch (error) {
+      console.warn("[draft-ai-fallback]", error);
+    }
+  }
+
+  return {
+    hotspot,
+    style,
+    lengthMode,
+    titleOptions,
+    images,
+    summary,
+    content,
+    generationSource,
+    status: input.currentStatus || "draft"
+  };
 }
 
+async function createDraftPayloadFromCurrentDraft(
+  current: DraftRecord,
+  payload: { styleId?: string; lengthMode?: string; referenceSummary?: string }
+) {
+  const style = payload.styleId ? getStyleById(payload.styleId) || getDefaultStyle() : getDefaultStyle();
+  const lengthMode = normalizeLengthMode(payload.lengthMode || current.lengthMode || getGenerationConfig().defaultLengthMode);
+  const topicType = "资讯";
+  const title = cleanText(current.title);
+  const fallbackTitleOptions = buildTitleOptions(title, topicType, lengthMode);
+  const summaryBase = cleanText(payload.referenceSummary || current.summary || current.title);
+  const fallbackSummary =
+    lengthMode === "detailed"
+      ? `${summaryBase} 这次重新生成基于现有稿件内容做了重组补强，会更强调事件脉络、核心信息和可直接成稿的表达。`
+      : `${summaryBase} 这次重新生成基于现有稿件内容做了重组补强，尽量保留原稿重点并提升可读性。`;
+  const images =
+    current.images && current.images.length > 0
+      ? current.images
+      : buildImages({
+          title,
+          summary: fallbackSummary,
+          topicType,
+          coverImage: current.coverImage,
+          hotspotMedia: current.coverImage ? [current.coverImage] : [],
+          relatedImages: [],
+          lengthMode
+        });
+  const coreFacts = cleanDraftContent(String(current.content || ""))
+    .split(/\n+/)
+    .map((item) => cleanText(item))
+    .filter(Boolean)
+    .slice(0, lengthMode === "simple" ? 2 : lengthMode === "detailed" ? 5 : 3);
+  const fallbackContent = cleanDraftContent(
+    buildContent(style, {
+      title,
+      summary: fallbackSummary,
+      topicType,
+      accountName: "稿件中心",
+      aggregationSummary: cleanText(current.summary),
+      coreFacts: coreFacts.length > 0 ? cleanTextList(coreFacts) : [cleanText(current.summary || current.title)],
+      relatedSources: [],
+      images,
+      lengthMode,
+      referenceSummary: cleanText(payload.referenceSummary)
+    })
+  );
+
+  let titleOptions = fallbackTitleOptions;
+  let summary = fallbackSummary;
+  let content = fallbackContent;
+  let generationSource: DraftGenerationSource = "template_fallback";
+
+  if (isAiDraftEnabled()) {
+    try {
+      const aiDraft = await generateDraftWithAi({
+        title,
+        topicType,
+        summary: fallbackSummary,
+        accountName: "稿件中心",
+        aggregationSummary: cleanText(current.summary),
+        coreFacts: coreFacts.length > 0 ? cleanTextList(coreFacts) : [cleanText(current.summary || current.title)],
+        relatedSources: [],
+        style,
+        lengthMode,
+        referenceSummary: cleanText(payload.referenceSummary),
+        images
+      });
+
+      titleOptions = pickDistinct(
+        [cleanText(aiDraft.title), ...aiDraft.titleOptions.map((item) => cleanText(item)), ...fallbackTitleOptions].filter(Boolean),
+        (item) => item
+      ).slice(0, 5);
+      summary = cleanText(aiDraft.summary || fallbackSummary) || fallbackSummary;
+      content = cleanDraftContent(aiDraft.content || fallbackContent) || fallbackContent;
+      generationSource = aiDraft.generationSource;
+    } catch (error) {
+      console.warn("[draft-ai-fallback]", error);
+    }
+  }
+
+  return {
+    style,
+    lengthMode,
+    titleOptions,
+    images,
+    summary,
+    content,
+    generationSource
+  };
+}
 export async function generateDraft(payload: { hotspotId: string; styleId?: string; lengthMode?: string }): Promise<DraftRecord> {
   const generated = await createDraftPayload(payload);
   const generationConfig = getGenerationConfig();
@@ -372,6 +572,7 @@ export async function generateDraft(payload: { hotspotId: string; styleId?: stri
     images: generated.images,
     titleOptions: generated.titleOptions,
     lengthMode: generated.lengthMode,
+    generationSource: generated.generationSource,
     status: "draft",
     originalityScore,
     errorReport,
@@ -382,10 +583,10 @@ export async function generateDraft(payload: { hotspotId: string; styleId?: stri
   db.prepare(`
     INSERT INTO drafts (
       id, hotspotId, styleId, title, summary, content, coverImage, imagesJson,
-      titleOptionsJson, lengthMode, status, originalityScore, errorReportJson, createdAt, updatedAt
+      titleOptionsJson, lengthMode, generationSource, status, originalityScore, errorReportJson, createdAt, updatedAt
     ) VALUES (
       @id, @hotspotId, @styleId, @title, @summary, @content, @coverImage, @imagesJson,
-      @titleOptionsJson, @lengthMode, @status, @originalityScore, @errorReportJson, @createdAt, @updatedAt
+      @titleOptionsJson, @lengthMode, @generationSource, @status, @originalityScore, @errorReportJson, @createdAt, @updatedAt
     )
   `).run({
     ...draft,
@@ -404,7 +605,7 @@ export async function regenerateDraft(
 ): Promise<DraftRecord> {
   const current = getDraftById(id);
   if (!current) {
-    throw new Error("\u7a3f\u4ef6\u4e0d\u5b58\u5728");
+    throw new Error("稿件不存在");
   }
 
   const referenceText = [current.summary, String(current.content || "")
@@ -417,6 +618,33 @@ export async function regenerateDraft(
     .filter(Boolean)
     .join(" ");
 
+  const titleSeed = listDraftVersions(current.id).length;
+
+  if (!getHotspotById(current.hotspotId)) {
+    const generated = await createDraftPayloadFromCurrentDraft(current, {
+      styleId: payload.styleId || current.styleId,
+      lengthMode: payload.lengthMode || current.lengthMode,
+      referenceSummary: referenceText
+    });
+
+    return updateDraft(
+      id,
+      {
+        styleId: generated.style.id,
+        title: generated.titleOptions[titleSeed % generated.titleOptions.length],
+        summary: generated.summary,
+        content: generated.content,
+        coverImage: generated.images[0]?.url || current.coverImage,
+        images: generated.images,
+        titleOptions: generated.titleOptions,
+        lengthMode: generated.lengthMode,
+        generationSource: generated.generationSource,
+        status: current.status
+      },
+      "system-regenerate"
+    );
+  }
+
   const generated = await createDraftPayload({
     hotspotId: current.hotspotId,
     styleId: payload.styleId || current.styleId,
@@ -425,7 +653,6 @@ export async function regenerateDraft(
     currentStatus: current.status
   });
 
-  const titleSeed = listDraftVersions(current.id).length;
   return updateDraft(
     id,
     {
@@ -437,12 +664,12 @@ export async function regenerateDraft(
       images: generated.images,
       titleOptions: generated.titleOptions,
       lengthMode: generated.lengthMode,
+        generationSource: generated.generationSource,
       status: current.status
     },
     "system-regenerate"
   );
 }
-
 export function listDrafts(): DraftRecord[] {
   const rows = db.prepare("SELECT * FROM drafts ORDER BY updatedAt DESC").all() as Record<string, unknown>[];
   return rows.map(mapDraft);
@@ -455,7 +682,7 @@ export function getDraftById(id: string): DraftRecord | undefined {
 
 export function updateDraft(
   id: string,
-  payload: Partial<Pick<DraftRecord, "title" | "summary" | "content" | "coverImage" | "images" | "status" | "styleId" | "titleOptions" | "lengthMode">>,
+  payload: Partial<Pick<DraftRecord, "title" | "summary" | "content" | "coverImage" | "images" | "status" | "styleId" | "titleOptions" | "lengthMode" | "generationSource">>,
   operatorName = "admin"
 ): DraftRecord {
   const current = getDraftById(id);
@@ -466,8 +693,13 @@ export function updateDraft(
   const next: DraftRecord = {
     ...current,
     ...payload,
-    originalityScore: estimateOriginality(payload.content || current.content),
-    errorReport: detectIssues(payload.content || current.content, getCrawlConfig().blockedWords),
+    title: cleanText(payload.title || current.title),
+    summary: cleanText(payload.summary || current.summary),
+    content: cleanDraftContent(payload.content || current.content),
+    titleOptions: (payload.titleOptions || current.titleOptions).map((item) => cleanText(item)).filter(Boolean),
+    generationSource: payload.generationSource || current.generationSource || "template_fallback",
+    originalityScore: estimateOriginality(cleanDraftContent(payload.content || current.content)),
+    errorReport: detectIssues(cleanDraftContent(payload.content || current.content), getCrawlConfig().blockedWords),
     updatedAt: now(),
     lengthMode: normalizeLengthMode(payload.lengthMode || current.lengthMode)
   };
@@ -482,6 +714,7 @@ export function updateDraft(
       imagesJson = @imagesJson,
       titleOptionsJson = @titleOptionsJson,
       lengthMode = @lengthMode,
+      generationSource = @generationSource,
       status = @status,
       originalityScore = @originalityScore,
       errorReportJson = @errorReportJson,
@@ -524,6 +757,38 @@ export function deleteDrafts(ids: string[]): number {
   });
   return transaction(ids);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

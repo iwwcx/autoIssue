@@ -8,7 +8,7 @@ function createItem(input: HotspotInput): HotspotInput {
   return input;
 }
 
-export const mockPlatformData: Record<SourcePlatform, HotspotInput[]> = {
+export const mockPlatformData: Partial<Record<SourcePlatform, HotspotInput[]>> = {
   douyin: [
     createItem({
       platform: "douyin",
@@ -361,3 +361,4 @@ export const mockPlatformData: Record<SourcePlatform, HotspotInput[]> = {
   baidu: [],
   toutiao: []
 };
+

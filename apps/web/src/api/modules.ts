@@ -3,7 +3,7 @@
 export const api = {
   getDashboard: () => http.get("/dashboard/overview"),
   getHotspots: (params: Record<string, unknown>) => http.get("/hotspots", { params }),
-  runCrawler: (payload?: { limit?: number; platform?: string; keyword?: string; topicType?: string }) => http.post("/crawler/run", payload || {}),
+  runCrawler: (payload?: { limit?: number; platform?: string; keyword?: string; topicType?: string; replaceExisting?: boolean }) => http.post("/crawler/run", payload || {}),
   updateHotspotStatus: (id: string, status: string) => http.post(`/hotspots/${id}/status`, { status }),
   deleteHotspot: (id: string) => http.delete(`/hotspots/${id}`),
   aggregateHotspot: (id: string) => http.post(`/hotspots/${id}/aggregate`),
@@ -33,3 +33,4 @@ export const api = {
   updateGenerationSettings: (payload: Record<string, unknown>) => http.put("/settings/generation", payload),
   getAnalytics: () => http.get("/analytics/overview")
 };
+

@@ -1,12 +1,19 @@
 ﻿<template>
   <div>
-    <el-card class="page-card" shadow="never">
+    <el-card class="page-card" shadow="never" v-loading="filterLoading">
       <el-form :inline="true" :model="filters">
         <el-form-item :label="texts.platform">
-          <el-select v-model="filters.platform" clearable :placeholder="texts.allPlatform" style="width: 140px">
-            <el-option :label="platformLabelMap.douyin" value="douyin" />
-            <el-option :label="platformLabelMap.xiaohongshu" value="xiaohongshu" />
-            <el-option :label="platformLabelMap.weibo" value="weibo" />
+          <el-select v-model="filters.platform" clearable :placeholder="texts.allPlatform" style="width: 160px">
+            <el-option :label="platformLabelMap.netease" value="netease" />
+            <el-option :label="platformLabelMap.google_news" value="google_news" />
+            <el-option :label="platformLabelMap.gnews" value="gnews" />
+            <el-option :label="platformLabelMap.newsapi" value="newsapi" />
+            <el-option :label="platformLabelMap.toutiao" value="toutiao" />
+            <el-option :label="platformLabelMap.juhe_news" value="juhe_news" />
+            <el-option :label="platformLabelMap.alapi_toutiao" value="alapi_toutiao" />
+            <el-option :label="platformLabelMap.newsdata" value="newsdata" />
+            <el-option :label="platformLabelMap.the_news_api" value="the_news_api" />
+            <el-option :label="platformLabelMap.sixty_seconds" value="sixty_seconds" />
           </el-select>
         </el-form-item>
         <el-form-item :label="texts.topicType">
@@ -22,25 +29,20 @@
             <el-option v-for="item in styles" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
-        <el-form-item :label="texts.lengthMode">
-          <el-select v-model="draftLengthMode" style="width: 140px">
-            <el-option :label="texts.simpleMode" value="simple" />
-            <el-option :label="texts.mediumMode" value="medium" />
-            <el-option :label="texts.detailedMode" value="detailed" />
-          </el-select>
-        </el-form-item>
         <el-form-item :label="texts.crawlCount">
           <el-input-number v-model="crawlLimit" :min="1" :max="30" style="width: 140px" />
         </el-form-item>
         <el-form-item>
-          <el-button @click="load">刷新列表</el-button>
-          <el-button type="primary" @click="runCrawler">{{ texts.runCrawler }}</el-button>
+          <el-button type="primary" :loading="crawlLoading" @click="runCrawler">
+            <el-icon><Promotion /></el-icon>
+            <span>{{ texts.runCrawler }}</span>
+          </el-button>
         </el-form-item>
       </el-form>
       <div class="toolbar-tip">抓取条件会直接决定这次抓回来的新闻，不再对结果列表做额外二次筛选。</div>
     </el-card>
 
-    <el-card class="page-card" style="margin-top: 16px">
+    <el-card class="page-card" style="margin-top: 16px" v-loading="tableLoading">
       <el-table :data="tableData.list" stripe>
         <el-table-column prop="title" :label="texts.hotTitle" min-width="300" />
         <el-table-column :label="texts.platform" width="130">
@@ -52,7 +54,14 @@
         </el-table-column>
         <el-table-column prop="topicType" :label="texts.topicType" width="120" />
         <el-table-column prop="accountName" :label="texts.accountName" width="150" />
-        <el-table-column prop="heatScore" :label="texts.heat" width="110" />
+        <el-table-column :label="texts.heat" width="130">
+          <template #default="scope">
+            <div class="heat-cell">
+              <el-icon class="heat-icon"><Opportunity /></el-icon>
+              <span>{{ formatScore(scope.row.heatScore) }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column :label="texts.status" width="120">
           <template #default="scope">
             <el-tag :class="statusTagClass(scope.row.status)" class="soft-tag" effect="light">
@@ -63,10 +72,18 @@
         <el-table-column :label="texts.actions" width="360" fixed="right">
           <template #default="scope">
             <el-space wrap>
-              <el-button size="small" @click="aggregate(scope.row)">{{ texts.aggregate }}</el-button>
-              <el-button size="small" type="primary" @click="generate(scope.row.id)">{{ texts.generate }}</el-button>
-              <el-button size="small" @click="mark(scope.row.id, 'processed')">{{ texts.markProcessed }}</el-button>
-              <el-button size="small" type="danger" @click="remove(scope.row.id)">{{ texts.remove }}</el-button>
+              <el-button size="small" :loading="aggregateLoadingId === scope.row.id" @click="aggregate(scope.row)">
+                {{ texts.aggregate }}
+              </el-button>
+              <el-button size="small" type="primary" :loading="generateLoadingId === scope.row.id" @click="generate(scope.row.id)">
+                {{ texts.generate }}
+              </el-button>
+              <el-button size="small" :loading="markLoadingId === scope.row.id" @click="mark(scope.row.id, 'processed')">
+                {{ texts.markProcessed }}
+              </el-button>
+              <el-button size="small" type="danger" :loading="removeLoadingId === scope.row.id" @click="remove(scope.row.id)">
+                {{ texts.remove }}
+              </el-button>
             </el-space>
           </template>
         </el-table-column>
@@ -83,9 +100,12 @@
       </div>
     </el-card>
 
-    <el-drawer v-model="aggregationVisible" size="42%" destroy-on-close>
+    <el-drawer v-model="aggregationVisible" size="42%" destroy-on-close v-loading="aggregationLoading">
       <template #header>
-        <div class="drawer-title">{{ texts.aggregateResult }}</div>
+        <div class="drawer-title">
+          <el-icon><Collection /></el-icon>
+          <span>{{ texts.aggregateResult }}</span>
+        </div>
       </template>
 
       <div v-if="aggregationData" class="aggregation-panel">
@@ -100,14 +120,20 @@
 
         <el-card shadow="never" class="aggregation-card">
           <template #header>
-            <div class="section-title">{{ texts.aggregateSummary }}</div>
+            <div class="section-title">
+              <el-icon><Document /></el-icon>
+              <span>{{ texts.aggregateSummary }}</span>
+            </div>
           </template>
           <div class="aggregation-summary">{{ aggregationData.summary }}</div>
         </el-card>
 
         <el-card shadow="never" class="aggregation-card">
           <template #header>
-            <div class="section-title">{{ texts.coreFacts }}</div>
+            <div class="section-title">
+              <el-icon><List /></el-icon>
+              <span>{{ texts.coreFacts }}</span>
+            </div>
           </template>
           <ol class="fact-list">
             <li v-for="item in aggregationData.coreFacts || []" :key="item">{{ item }}</li>
@@ -116,7 +142,10 @@
 
         <el-card shadow="never" class="aggregation-card">
           <template #header>
-            <div class="section-title">{{ texts.relatedSources }}</div>
+            <div class="section-title">
+              <el-icon><Share /></el-icon>
+              <span>{{ texts.relatedSources }}</span>
+            </div>
           </template>
           <div v-if="aggregationData.relatedSources?.length" class="source-list">
             <div v-for="(item, index) in aggregationData.relatedSources" :key="index" class="source-item">
@@ -127,7 +156,9 @@
                 <span class="source-title">{{ item.title }}</span>
               </div>
               <div class="source-summary">{{ item.summary }}</div>
-              <div class="source-meta">{{ texts.sourceAccount }}{{ item.accountName }} · {{ texts.publishTime }}{{ item.publishTime }}</div>
+              <div class="source-meta">
+                {{ texts.sourceAccount }}{{ item.accountName }} · {{ texts.publishTime }}{{ formatDateTime(item.publishTime) }}
+              </div>
             </div>
           </div>
           <el-empty v-else :description="texts.emptySources" />
@@ -135,7 +166,10 @@
 
         <el-card shadow="never" class="aggregation-card">
           <template #header>
-            <div class="section-title">{{ texts.relatedImages }}</div>
+            <div class="section-title">
+              <el-icon><Picture /></el-icon>
+              <span>{{ texts.relatedImages }}</span>
+            </div>
           </template>
           <div v-if="aggregationData.relatedImages?.length" class="image-grid">
             <img v-for="item in aggregationData.relatedImages" :key="item" :src="item" class="aggregation-image" />
@@ -151,15 +185,25 @@
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useRouter } from "vue-router";
+import { Collection, Document, Opportunity, List, Picture, Promotion, Share } from "@element-plus/icons-vue";
 import { api } from "../../api/modules";
+import { formatDateTime, formatScore, platformLabel, platformTagClass } from "../../shared/display";
 
 const router = useRouter();
 const selectedStyleId = ref("");
 const draftLengthMode = ref("medium");
-const crawlLimit = ref(8);
+const crawlLimit = ref(5);
 const styles = ref<Array<Record<string, any>>>([]);
 const aggregationVisible = ref(false);
 const aggregationData = ref<Record<string, any> | null>(null);
+const filterLoading = ref(false);
+const tableLoading = ref(false);
+const crawlLoading = ref(false);
+const aggregationLoading = ref(false);
+const aggregateLoadingId = ref("");
+const generateLoadingId = ref("");
+const markLoadingId = ref("");
+const removeLoadingId = ref("");
 const aggregationTopic = reactive({
   title: "",
   platform: "",
@@ -190,10 +234,6 @@ const texts = {
   keywordPlaceholder: "输入想抓取的新闻关键词，比如 AI、教育、汽车",
   style: "生成风格",
   defaultStyle: "使用默认风格",
-  lengthMode: "稿件篇幅",
-  simpleMode: "简单内容",
-  mediumMode: "中等内容",
-  detailedMode: "详细内容",
   crawlCount: "本次抓取",
   runCrawler: "立即抓取",
   hotTitle: "热点标题",
@@ -216,9 +256,16 @@ const texts = {
 };
 
 const platformLabelMap: Record<string, string> = {
-  douyin: "抖音",
-  xiaohongshu: "小红书",
-  weibo: "微博"
+  netease: "网易新闻",
+  google_news: "Google News",
+  gnews: "GNews",
+  newsapi: "NewsAPI",
+  toutiao: "今日头条",
+  juhe_news: "聚合数据新闻",
+  alapi_toutiao: "ALAPI 头条",
+  newsdata: "NewsData.io",
+  the_news_api: "TheNewsAPI",
+  sixty_seconds: "60s 热点"
 };
 
 const statusLabelMap: Record<string, string> = {
@@ -227,20 +274,8 @@ const statusLabelMap: Record<string, string> = {
   ignored: "已忽略"
 };
 
-function platformLabel(platform: string) {
-  return platformLabelMap[platform] || platform || "未知平台";
-}
-
 function statusLabel(status: string) {
   return statusLabelMap[status] || status || "未知状态";
-}
-
-function platformTagClass(platform: string) {
-  return {
-    douyin: "tag-douyin",
-    xiaohongshu: "tag-xiaohongshu",
-    weibo: "tag-weibo"
-  }[platform] || "tag-default";
 }
 
 function statusTagClass(status: string) {
@@ -252,60 +287,98 @@ function statusTagClass(status: string) {
 }
 
 async function load() {
-  const response = await api.getHotspots({ page: filters.page, pageSize: filters.pageSize });
-  Object.assign(tableData, response.data);
+  tableLoading.value = true;
+  try {
+    const response = await api.getHotspots({ page: filters.page, pageSize: filters.pageSize });
+    Object.assign(tableData, response.data);
+  } finally {
+    tableLoading.value = false;
+  }
 }
 
 async function loadStyles() {
-  const response = await api.getStyles();
-  styles.value = response.data;
+  filterLoading.value = true;
+  try {
+    const response = await api.getStyles();
+    styles.value = response.data;
+  } finally {
+    filterLoading.value = false;
+  }
 }
 
 async function runCrawler() {
-  const response = await api.runCrawler({
-    limit: Number(crawlLimit.value || 8),
-    platform: filters.platform || undefined,
-    keyword: filters.keyword || undefined,
-    topicType: filters.topicType || undefined
-  });
-  ElMessage.success(`抓取完成，本次处理 ${response.data.inserted || 0} 条热点`);
-  filters.page = 1;
-  await load();
+  crawlLoading.value = true;
+  try {
+    const response = await api.runCrawler({
+      limit: Number(crawlLimit.value || 5),
+      platform: filters.platform || undefined,
+      keyword: filters.keyword || undefined,
+      topicType: filters.topicType || undefined,
+      replaceExisting: true
+    });
+    ElMessage.success(`抓取完成，本次处理 ${response.data.inserted || 0} 条热点`);
+    filters.page = 1;
+    await load();
+  } finally {
+    crawlLoading.value = false;
+  }
 }
 
 async function aggregate(row: Record<string, any>) {
-  const response = await api.aggregateHotspot(row.id);
-  aggregationData.value = response.data;
-  Object.assign(aggregationTopic, {
-    title: row.title,
-    platform: row.platform,
-    accountName: row.accountName,
-    topicType: row.topicType
-  });
+  aggregateLoadingId.value = String(row.id);
+  aggregationLoading.value = true;
   aggregationVisible.value = true;
+  try {
+    const response = await api.aggregateHotspot(row.id);
+    aggregationData.value = response.data;
+    Object.assign(aggregationTopic, {
+      title: row.title,
+      platform: row.platform,
+      accountName: row.accountName,
+      topicType: row.topicType
+    });
+  } finally {
+    aggregateLoadingId.value = "";
+    aggregationLoading.value = false;
+  }
 }
 
 async function generate(id: string) {
-  const response = await api.generateDraft({
-    hotspotId: id,
-    styleId: selectedStyleId.value || undefined,
-    lengthMode: draftLengthMode.value
-  });
-  ElMessage.success("图文稿件已生成");
-  router.push(`/drafts/${response.data.id}`);
+  generateLoadingId.value = String(id);
+  try {
+    const response = await api.generateDraft({
+      hotspotId: id,
+      styleId: selectedStyleId.value || undefined,
+      lengthMode: draftLengthMode.value
+    });
+    ElMessage.success("图文稿件已生成");
+    router.push(`/drafts/${response.data.id}`);
+  } finally {
+    generateLoadingId.value = "";
+  }
 }
 
 async function mark(id: string, status: string) {
-  await api.updateHotspotStatus(id, status);
-  ElMessage.success("状态已更新");
-  await load();
+  markLoadingId.value = String(id);
+  try {
+    await api.updateHotspotStatus(id, status);
+    ElMessage.success("状态已更新");
+    await load();
+  } finally {
+    markLoadingId.value = "";
+  }
 }
 
 async function remove(id: string) {
   await ElMessageBox.confirm("确认删除这条热点吗？", "提示", { type: "warning" });
-  await api.deleteHotspot(id);
-  ElMessage.success("已删除");
-  await load();
+  removeLoadingId.value = String(id);
+  try {
+    await api.deleteHotspot(id);
+    ElMessage.success("已删除");
+    await load();
+  } finally {
+    removeLoadingId.value = "";
+  }
 }
 
 onMounted(async () => {
@@ -331,6 +404,18 @@ onMounted(async () => {
   border-radius: 999px;
   padding: 0 10px;
   font-weight: 600;
+}
+
+.heat-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #c2410c;
+}
+
+.heat-icon {
+  color: #f97316;
 }
 
 .tag-douyin {
@@ -372,6 +457,9 @@ onMounted(async () => {
   font-size: 22px;
   font-weight: 700;
   color: #16233b;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .aggregation-panel {
@@ -401,6 +489,9 @@ onMounted(async () => {
 
 .section-title {
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .aggregation-summary {
@@ -465,3 +556,4 @@ onMounted(async () => {
   display: block;
 }
 </style>
+

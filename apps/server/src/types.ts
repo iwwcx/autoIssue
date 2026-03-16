@@ -1,10 +1,19 @@
-﻿export type SourcePlatform =
+export type SourcePlatform =
   | "douyin"
   | "xiaohongshu"
   | "weibo"
   | "weixin"
   | "baidu"
-  | "toutiao";
+  | "toutiao"
+  | "netease"
+  | "google_news"
+  | "gnews"
+  | "newsapi"
+  | "juhe_news"
+  | "alapi_toutiao"
+  | "newsdata"
+  | "the_news_api"
+  | "sixty_seconds";
 
 export type PublishPlatform =
   | "netease"
@@ -20,6 +29,7 @@ export type PlatformCode = SourcePlatform | PublishPlatform;
 export type HotspotStatus = "pending" | "processed" | "ignored";
 export type DraftStatus = "draft" | "ready" | "published";
 export type DraftLengthMode = "simple" | "medium" | "detailed";
+export type DraftGenerationSource = "qwen" | "template_fallback";
 export type PublishStatus = "pending" | "running" | "success" | "failed";
 export type AccountStatus = "normal" | "abnormal" | "unchecked";
 
@@ -123,6 +133,7 @@ export interface DraftRecord {
   images: DraftImageBlock[];
   titleOptions: string[];
   lengthMode: DraftLengthMode;
+  generationSource: DraftGenerationSource;
   status: DraftStatus;
   originalityScore: number;
   errorReport: string[];
@@ -180,3 +191,10 @@ export interface PublishJobRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+
+
+
+
+
+

@@ -1,13 +1,24 @@
-﻿export const platformLabelMap: Record<string, string> = {
+export const platformLabelMap: Record<string, string> = {
   douyin: "抖音",
   xiaohongshu: "小红书",
   weibo: "微博",
+  toutiao: "今日头条",
   netease: "网易新闻",
+  google_news: "Google News",
+  gnews: "GNews",
+  newsapi: "NewsAPI",
+  juhe_news: "聚合数据新闻",
+  alapi_toutiao: "ALAPI 头条",
+  newsdata: "NewsData.io",
+  the_news_api: "TheNewsAPI",
+  sixty_seconds: "60s 热点",
+  netease_publish: "网易新闻",
   sohu: "搜狐新闻",
   sina: "新浪新闻",
   weixin: "微信公众号",
   baijiahao: "百家号",
-  pengpai: "澎湃号"
+  pengpai: "澎湃号",
+  baidu: "百度新闻"
 };
 
 export const hotspotStatusLabelMap: Record<string, string> = {
@@ -75,12 +86,22 @@ export function platformTagClass(value?: string) {
     douyin: "tag-douyin",
     xiaohongshu: "tag-xiaohongshu",
     weibo: "tag-weibo",
+    toutiao: "tag-netease",
     netease: "tag-netease",
+    google_news: "tag-sohu",
+    gnews: "tag-sina",
+    newsapi: "tag-weixin",
+    juhe_news: "tag-default",
+    alapi_toutiao: "tag-netease",
+    newsdata: "tag-sohu",
+    the_news_api: "tag-sina",
+    sixty_seconds: "tag-default",
     sohu: "tag-sohu",
     sina: "tag-sina",
     weixin: "tag-weixin",
     baijiahao: "tag-baijiahao",
-    pengpai: "tag-pengpai"
+    pengpai: "tag-pengpai",
+    baidu: "tag-default"
   }[value || ""] || "tag-default";
 }
 
@@ -116,3 +137,49 @@ export function publishStatusTagClass(value?: string) {
     failed: "status-failed"
   }[value || ""] || "tag-default";
 }
+
+
+export function formatDateTime(value?: string | number | Date) {
+  if (!value) return "--";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).format(date).replace(/\//g, "-");
+}
+
+export function formatScore(value?: string | number) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "--";
+  }
+  return numeric >= 1000 ? numeric.toFixed(0) : numeric.toFixed(1);
+}
+
+
+export const draftGenerationSourceLabelMap: Record<string, string> = {
+  qwen: "Qwen AI",
+  template_fallback: "模板兜底"
+};
+
+export function draftGenerationSourceLabel(value?: string) {
+  if (!value) return "未知来源";
+  return draftGenerationSourceLabelMap[value] || value;
+}
+
+export function draftGenerationSourceTagClass(value?: string) {
+  return {
+    qwen: "status-running",
+    template_fallback: "status-ignored"
+  }[value || ""] || "tag-default";
+}
+
